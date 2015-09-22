@@ -123,13 +123,13 @@ Editor.prototype = {
         },
         annotate: function(type){
             var editor = this,
-                text = prompt(parameters[0] || "Annotation");
+                text = prompt(type || "Annotation");
             if(text){
                 var content = $('<span>').append('<span>' + text + '</span>')
                                          .append('<button class="delete">&times;</button>'),
                     annotation = $('<span>').addClass('editor-annotation')
                                             .addClass('noselect')
-                                            .addClass(parameters[0])
+                                            .addClass(type)
                                             .append(content);
                 if(editor.caret.closest('body')){
                     editor.caret.before(annotation);
