@@ -242,7 +242,7 @@ Editor.prototype = {
     },
     backspace: function(){
         var editor = this;
-        if(editor.caret.closest('body').length){
+        if(editor.insertionPoint()){
             var block = editor.block(editor.caret),
                 textNode = previousTextNode(editor.caret[0], block[0], true);
             if(textNode){
@@ -274,7 +274,7 @@ Editor.prototype = {
     },
     splitAtCaret: function(){
         var editor = this;
-        if(editor.caret.closest('body').length){
+        if(editor.insertionPoint()){
             var block = editor.block(editor.caret),
                 beforeBlock = block.clone(),
                 nodes = allLeafNodes(block),
@@ -330,7 +330,7 @@ Editor.prototype = {
                 break;
             case 13:
                 evt.preventDefault();
-                if(editor.caret.closest('body').length){
+                if(editor.insertionPoint()){
                     editor.splitAtCaret();
                 } else {
                     editor.deleteSelection();
@@ -347,7 +347,7 @@ Editor.prototype = {
       	if(evt.ctrlKey || evt.metaKey){
       	    editor.shortcut(evt);
       	} else {
-            if(editor.caret.closest('body').length === 0){
+            if(!editor.insertionPoint()){
                 editor.deleteSelection();
             }
             
@@ -433,7 +433,7 @@ Editor.prototype = {
     selectedLeafNodes: function(){
         var editor = this;
         var nodes = [];
-        if(editor.caret.closest('body').length){
+        if(editor.insertionPoint()){
             return nodes;
         }
         
@@ -469,7 +469,7 @@ Editor.prototype = {
     // and merges the first and last blocks if the selection spanned multiple blocks
     deleteSelection: function(){
         var editor = this;
-        if(editor.caret.closest('body').length){
+        if(editor.insertionPoint()){
             return;
         }
         
@@ -583,6 +583,14 @@ Editor.prototype = {
         var editor = this,
             nodes = editor.selectedLeafNodes();
         editor.setSelection(nodes);
+    },
+    // if the caret is within the root then it is the insertion point
+    insertionPoint: function(){
+        if( $.contains(this.root[0], this.caret[0]) ){
+            return true;
+        } else {
+            return false;
+        }
     },
     // stores a selection bound as an offset and node-path
     // e.g. 1,2,3 would mean after character 3 of node.childNodes[1].childNodes[3] 
