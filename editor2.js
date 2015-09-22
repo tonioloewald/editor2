@@ -10,6 +10,26 @@ $.fn.editor = function(options){
     return this;
 };
 
+/*
+var cssNoSelect = {
+    '-webkit-touch-callout': 'none',
+    '-webkit-user-select': 'none',
+    '-khtml-user-select': 'none',
+    '-moz-user-select': 'none',
+    '-ms-user-select': 'none',
+    'user-select': 'none',
+};
+
+var cssSelect = {
+    '-webkit-touch-callout': 'text',
+    '-webkit-user-select': 'text',
+    '-khtml-user-select': 'text',
+    '-moz-user-select': 'text',
+    '-ms-user-select': 'text',
+    'user-select': 'text',
+};
+*/
+
 function Editor(elt, options){
     this.root = $(elt);
     this.options = $.extend({}, options);
@@ -28,6 +48,9 @@ function Editor(elt, options){
     return this;
 }
 
+/*
+    DOM traversal utilities
+*/
 function allLeafNodes(node){
     var nodeList = [];
     if(node.length && node.nodeType === undefined){
@@ -45,6 +68,51 @@ function allLeafNodes(node){
         }
     }
     return nodeList;
+}
+
+function previousTextNode(node, base, cleanup){
+	if(!base){
+        base = document;
+    }
+    if(!cleanup){
+        cleanup = false;
+    } else {
+        cleanup = [];
+    }
+    node = $(node)[0];
+    var path = [node];
+	do {
+	    if(cleanup && node.nodeType === 3 && node.textContent.trim().length === 0){
+	        cleanup.push(node);
+	    }
+        if(node.previousSibling){
+            node = node.previousSibling;
+            path.push(node);
+            while ( node.firstChild ){
+                node = node.childNodes[node.childNodes.length -1];
+            	path.push(node);
+            }
+        } else if( node.parentNode === base ){
+            node = false;
+            path.push(node);
+            break;
+        } else {
+            node = node.parentNode;
+            path.push(node);
+        }
+    } while (node.nodeType !== 3 || node.textContent.trim().length === 0 );
+    if(cleanup.length){
+        $.each(cleanup, function(){ $(this).remove(); });
+        if(node.nodeType === 3){
+            node.nodeValue = node.textContent + " ";
+        }
+    }
+    // console.log(path);
+    return node;
+}
+
+// TODO
+function nextTextNode(){
 }
 
 function ensureNonEmpty(nodes){
@@ -80,7 +148,7 @@ Editor.prototype = {
             var target = $(evt.target);
             if(target.is('button.delete')){
             } else {
-                var text = $(this).closest('.editor-annotation')
+                var text = $(this).closest('.editor-annotation');
             }
             $(evt.target).closest('.editor-annotation').remove();
             editor.updateUndo("new");
@@ -163,56 +231,95 @@ Editor.prototype = {
         var editor = evt.data;
       	editor.recordSelection();
     },
+    contentKey: function(key){
+        var editor = this;
+        if(typeof key === 'number'){
+            key = String.fromCharCode(key);
+        }
+        editor.caret.before(document.createTextNode(key));
+        editor.normalize();
+    },
+    backspace: function(){
+        var editor = this;
+        if(editor.caret.closest('body').length){
+            var block = editor.block(editor.caret),
+                textNode = previousTextNode(editor.caret[0], block[0], true);
+            if(textNode){
+                var text = textNode.textContent;
+                text = text.substr(0, text.length - 1);
+                textNode.nodeValue = text;
+            } else {
+                editor.mergeBackAtCaret();
+            }
+            editor.updateUndo();
+        } else {
+            editor.deleteSelection();
+        }
+    },
+    // TODO
+    forwardDelete: function(){
+    },
+    arrowLeft: function(){
+    },
+    arrowRight: function(){
+    },
+    arrowUp: function(){
+    },
+    arrowDown: function(){
+    },
+    home: function(){
+    },
+    end: function(){
+    },
+    splitAtCaret: function(){
+        var editor = this;
+        if(editor.caret.closest('body').length){
+            var block = editor.block(editor.caret);
+            return true;
+        }
+    },
+    mergeBackAtCaret: function(){
+        var editor = this,
+            block = editor.block(editor.caret);
+        if(previousTextNode(editor.caret[0], block[0], true) === false){
+            // at the beginning of a paragraph; merge with previous
+            if(block[0].previousSibling){
+                block.prev().append(editor.caret).append(block.contents());
+                block.remove();
+                return true;
+            }
+        }
+        return false;
+    },
+    mergeForwardAtCaret: function(){
+        var editor = this,
+            block = editor.block(editor.caret);
+        if(nextTextNode(editor.caret[0], block[0], true) === false) {
+            // at the end of a paragraph; merge with next
+            if(block[0].nextSibling){
+                block.next().contents().insertAfter(editor.caret);
+                block.remove();
+                return true;
+            }
+        }
+        return false;
+    },
     keydown: function(evt){
         var editor = evt.data;
         switch(evt.keyCode){
-            case 8:  
-                editor.deleteSelection();
+            case 8:
                 evt.preventDefault();
+                editor.backspace();
                 break;
             case 13:
-                editor.deleteSelection();
-                var block = editor.block(editor.caret),
-                    before = block.clone(),
-                    after = before.clone();
-                
-                editor.caret.detach();
-                
-                var nodes = allLeafNodes(after),
-                    splitPoint;
-                $.each(nodes, function(idx){                
-                    if(this.nodeType === 3 && this.parentNode.childNodes.length === 1){
-                        $(this.parentNode).remove();
-                    } else {
-                        $(this).remove();
-                    }
-                    if($(this).is('.caret')){
-                        $(this).remove();
-                        splitPoint = idx;
-                        return false;
-                    }
-                });
-                
-                nodes = allLeafNodes(before);
-                $.each(nodes, function(idx){
-                    if(idx >= splitPoint){
-                        if(this.nodeType === 3 && this.parentNode.childNodes.length === 1){
-                            $(this.parentNode).remove();
-                        } else {
-                            $(this).remove();
-                        }
-                    }
-                });
-                
-                block.replaceWith(before.add(after));
-                ensureNonEmpty(after);
-                
-                editor.setSelection(function(range){
-                    range.setStartBefore(after.contents()[0]);
-                    range.setEndBefore(after.contents()[0]);
-                });
-                
                 evt.preventDefault();
+                if(editor.caret.closest('body').length){
+                    editor.splitAtCaret();
+                } else {
+                    editor.deleteSelection();
+                    editor.splitAtCaret();
+                }
+                break;
         }
     },
     keypress: function(evt){
@@ -233,8 +340,7 @@ Editor.prototype = {
                     console.error('special key slipped through?', evt.which);
                     break;
                 default:
-                    editor.caret.before(document.createTextNode(String.fromCharCode(evt.which)));
-                    editor.normalize();
+                    editor.contentKey(evt.which);
                     break;
             }
       	}
@@ -350,25 +456,16 @@ Editor.prototype = {
         if(nodes.length === 0){
             return;
         }
-        editor.caret.insertBefore(nodes[0]);
         
         $.each(nodes, function(){ $(this).remove(); });
-        
         var blocks = editor.selectedBlocks();
         for(var i = 1; i < blocks.length - 1; i++){
             $(blocks[i]).remove();
         }
-        
-        // if the selection spanned multiple blocks, merge the first and last
-        var first = editor.find('.first-block'),
-            last = editor.find('.last-block');
-        if(first[0] !== last[0]){
-            first.append(editor.caret).append(last.contents());
-            last.remove();
-        }
-        
-        // select after the caret
-        editor.setSelection([editor.caret[0]]);
+        editor.forgetSelection();
+        blocks.last().prepend(editor.caret);
+        editor.mergeBackAtCaret();
+        editor.updateUndo("new");
     },
     // callback is a function which is passed range as a parameter
     // if an array of nodes is called, it will select from the first to the last
@@ -418,11 +515,13 @@ Editor.prototype = {
     },
     // removes the selection information from the DOM
     forgetSelection: function(){
+        // this.root.css(cssNoSelect);
         this.find('[data-selection-start]').removeAttr('data-selection-start');
         this.find('[data-selection-end]').removeAttr('data-selection-end');
         this.find('.current').removeClass('current');
         this.find('.editor-selection-wrapper').contents().unwrap();
         this.caret.detach();
+        // this.root.css(cssSelect);
     },
     // determine a node's position amongst its parent's childNodes
 	nodePosition: function(node){
@@ -474,6 +573,23 @@ Editor.prototype = {
         // console.log(node, attribute, nodePath.join());
         node.attr(attribute, nodePath.join());
     },
+    updateParagraphStyleMenu: function(){
+        var menu = this.tools.find('select[name="paragraph-style"]'),
+            currentBlockType;
+        if(!menu.length){
+            return;
+        }
+        this.selectedBlocks().addClass('current').each(function(){
+            if(currentBlockType === undefined){
+                currentBlockType = this.nodeName;
+            } else if (currentBlockType !== this.nodeName){
+                currentBlockType = false;
+            }
+        });
+        if(currentBlockType){
+            menu.val('setBlocks ' + currentBlockType.toLowerCase());
+        }
+    },
     // records selection information into the DOM
     recordSelection: function(){
         this.forgetSelection();
@@ -490,19 +606,7 @@ Editor.prototype = {
         console.log(range.startContainer, range.startOffset, range.endContainer, range.endOffset);
         this.recordSelectionBound(range.startContainer, 'data-selection-start', range.startOffset);
         this.recordSelectionBound(range.endContainer, 'data-selection-end', range.endOffset);
-        var currentBlockType;
-        this.selectedBlocks().addClass('current').each(function(){
-            if(currentBlockType === undefined){
-                currentBlockType = this.nodeName;
-            } else if (currentBlockType !== this.nodeName){
-                currentBlockType = false;
-            }
-        });
-        if(currentBlockType){
-            this.tools
-                .find('select[name="paragraph-style"]')
-                .val('setBlocks ' + currentBlockType.toLowerCase());
-        }
+        this.updateParagraphStyleMenu();
         this.updateUndo("new");
     }
 };
