@@ -179,9 +179,11 @@ Editor.prototype = {
             $.each(nodes, function(){
                 // console.log(this);
                 if(this.nodeType === 3 && this.parentNode.childNodes.length === 1){
-                    $(this.parentNode).addClass(className);
+                    $(this.parentNode).addClass(className)
+                                      .addClass('editor-selected');
                 } else if(this.nodeType === 3) {
-                    $(this).wrap($('<span>').addClass(className));
+                    $(this).wrap($('<span>').addClass(className)
+                                            .addClass('editor-selected'));
                 }
             });
         },
@@ -205,7 +207,7 @@ Editor.prototype = {
                 }
             }
             editor.root.focus();
-            editor.recordSelection();
+            editor.recordSelection(true);
         }
     },
     /* tool commands */
@@ -343,7 +345,6 @@ Editor.prototype = {
                     break;
             }
       	}
-      	
       	editor.updateUndo();
       	
       	evt.preventDefault();
@@ -423,6 +424,11 @@ Editor.prototype = {
         var startNode = editor.nodeFromPath('data-selection-start');
         var endNode = editor.nodeFromPath('data-selection-end');
         
+        var lastDitchSelection = editor.find('.editor-selected');
+        if(lastDitchSelection.length){
+            return allLeafNodes(lastDitchSelection);
+        }
+        
         if(startNode.node === endNode.node){
             nodes.push( startNode.node
                                  .splitText(startNode.offset)
@@ -461,9 +467,9 @@ Editor.prototype = {
         for(var i = 1; i < blocks.length - 1; i++){
             $(blocks[i]).remove();
         }
-        editor.forgetSelection();
         blocks.last().prepend(editor.caret);
         editor.mergeBackAtCaret();
+        editor.forgetSelection(true);
         editor.updateUndo("new");
     },
     // callback is a function which is passed range as a parameter
@@ -472,6 +478,7 @@ Editor.prototype = {
         var editor = this;       
         var range = document.createRange();
         var selection = window.getSelection();
+        selection.empty();
         if(typeof callback === 'function'){
             callback(range);
         } else if (callback.constructor === Array) {
@@ -481,7 +488,7 @@ Editor.prototype = {
         }
         selection.removeAllRanges();
         selection.addRange(range);
-        this.recordSelection();
+        this.recordSelection(true);
     },
     // gets the top level block containing the node
     block: function(node){
@@ -513,13 +520,18 @@ Editor.prototype = {
         return blocks;
     },
     // removes the selection information from the DOM
-    forgetSelection: function(){
+    forgetSelection: function(keepCaret){
         // this.root.css(cssNoSelect);
         this.find('[data-selection-start]').removeAttr('data-selection-start');
         this.find('[data-selection-end]').removeAttr('data-selection-end');
         this.find('.current').removeClass('current');
+        this.find('.editor-selected').removeClass('editor-selected');
         this.find('.editor-selection-wrapper').contents().unwrap();
-        this.caret.detach();
+        if(keepCaret){
+            window.getSelection().empty();
+        } else {
+            this.find('.caret').detach();
+        }
         // this.root.css(cssSelect);
     },
     // determine a node's position amongst its parent's childNodes
@@ -590,8 +602,8 @@ Editor.prototype = {
         }
     },
     // records selection information into the DOM
-    recordSelection: function(){
-        this.forgetSelection();
+    recordSelection: function(keepCaret){
+        this.forgetSelection(keepCaret);
         this.normalize();
         var selection = window.getSelection();
         var range = selection && selection.getRangeAt && selection.rangeCount === 1 && selection.getRangeAt(0);
