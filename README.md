@@ -2,6 +2,8 @@
 
 Rich text editor **with no contentEditable**.
 
+Click here for a demo <a href="https://cdn.rawgit.com/tonioloewald/editor2/master/index.html">Demo</a>
+
 Having written a pretty robust rich text editor based on contentEditable and then seen it have horrific performance
 issues with recent versions of IE, and even more horrific accessibility issues everywhere, I came to the conclusion
 that what the world really needed was an open source rich text editor that doesn't use contenteditable.
