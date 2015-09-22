@@ -275,7 +275,23 @@ Editor.prototype = {
     splitAtCaret: function(){
         var editor = this;
         if(editor.caret.closest('body').length){
-            var block = editor.block(editor.caret);
+            var block = editor.block(editor.caret),
+                beforeBlock = block.clone(),
+                nodes = allLeafNodes(block),
+                beforeNodes = allLeafNodes(beforeBlock),
+                inBeforeBlock = false;
+            if(nodes.length !== beforeNodes.length){
+                console.error('we are in bizarro world');
+            }
+            $.each(nodes, function(idx){
+                var node = inBeforeBlock ? beforeNodes[idx] : nodes[idx];
+                if(this === editor.caret[0]){
+                    node = beforeNodes[idx];
+                    inBeforeBlock = true;
+                }
+                $(node).remove();
+            });
+            beforeBlock.insertBefore(block);
             return true;
         }
     },
