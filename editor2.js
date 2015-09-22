@@ -477,14 +477,17 @@ Editor.prototype = {
         if(nodes.length === 0){
             return;
         }
-        
-        $.each(nodes, function(){ $(this).remove(); });
         var blocks = editor.selectedBlocks();
-        for(var i = 1; i < blocks.length - 1; i++){
-            $(blocks[i]).remove();
+        
+        editor.caret.insertAfter(nodes[nodes.length - 1]);
+        $.each(nodes, function(){ $(this).remove(); });
+        if(blocks.length > 1){
+            for(var i = 1; i < blocks.length - 1; i++){
+                $(blocks[i]).remove();
+            }
+            // blocks.last().prepend(editor.caret);
+            editor.mergeBackAtCaret();
         }
-        blocks.last().prepend(editor.caret);
-        editor.mergeBackAtCaret();
         editor.forgetSelection(true);
         editor.updateUndo("new");
     },
@@ -521,13 +524,12 @@ Editor.prototype = {
     },
     // returns the top level blocks containing the selection range
     selectedBlocks: function(){
-        var caret = this.find('.caret'),
-            blocks;
+        var blocks;
             
         this.find('.first-block').removeClass('first-block');
         this.find('.last-block').removeClass('last-block');
-        if(caret.length){
-            blocks = this.block(caret).addClass('first-block last-block');
+        if(this.insertionPoint()){
+            blocks = this.block(this.caret).addClass('first-block last-block');
         } else {
             var first = this.block(this.find('[data-selection-start]')).addClass('first-block');
             var last = this.block(this.find('[data-selection-end]')).addClass('last-block');
