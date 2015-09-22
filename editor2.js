@@ -184,7 +184,6 @@ Editor.prototype = {
                     $(this).wrap($('<span>').addClass(className));
                 }
             });
-            editor.recordSelection(nodes);
         },
         updateUndo: function(command){
             this.updateUndo(command);
@@ -603,7 +602,6 @@ Editor.prototype = {
                 $(range.startContainer).prepend(this.caret);
             }
         }
-        console.log(range.startContainer, range.startOffset, range.endContainer, range.endOffset);
         this.recordSelectionBound(range.startContainer, 'data-selection-start', range.startOffset);
         this.recordSelectionBound(range.endContainer, 'data-selection-end', range.endOffset);
         this.updateParagraphStyleMenu();
