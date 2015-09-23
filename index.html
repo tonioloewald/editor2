@@ -288,10 +288,11 @@
         <p>done in Convention by the Unanimous Consent of the States present the Seventeenth Day of September in the Year of our Lord one thousand seven hundred and Eighty seven and of the Independance of the United States of America the Twelfth In witness whereof We have hereunto subscribed our Names,</p>
     </div>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="shared.js"></script>
     <script src="editor2.js"></script>
+    <script src="selection.js"></script>
     <script>
         /* cleanup the markup in the editor */
-        $('.editor').allowSelection(false);
         $('.editor').find('a').each(function(){
             if(!$(this).text().trim()){
                 $(this).remove();
@@ -313,184 +314,9 @@
         $('.editor').show();
     </script>
     <script>
-        /* DIY selection */
-        function isTextNode(node){
-            return node.nodeType === 3;
-        }
-        
-        $.fn.spanify = function(makeSpans){
-            if(makeSpans){
-                var textNodes = this.leafNodes(isTextNode),
-                    container = $('<span>'),
-                    charSpan = $('<span>').addClass('spanified');
-                $.each(textNodes, function(){
-                    if(this.length > 1){
-                        $(this).parent().removeClass('spanified');
-                        $.each(new String(this.textContent), function(){
-                            container.append(charSpan.clone().text(this));
-                        });
-                        $(this).replaceWith(container.contents());
-                    }
-                });
-            } else {
-                this.find('.spanified').contents().unwrap();
-                this.each(function(){
-                    this.normalize();
-                });
-            }
-        }
-        
-        $.fn.isBefore = function(otherElt){
-            /*
-                https://developer.mozilla.org/en-US/docs/Web/API/Node/compareDocumentPosition
-                http://ejohn.org/blog/comparing-document-position/
-                nodeA.compareDocumentPosition(nodeB) returns bitmask:
-                1 -- disconnected
-                2 -- nodeB is before nodeA
-                4 -- nodeA is before nodeB
-                8 -- nodeB contains nodeA
-                16 -- nodeA contains nodeB
-                32 -- ¯\_(ツ)_/¯
-            */
-            return this[0].compareDocumentPosition($(otherElt)[0]) & 4;
-        }
-        
-        function caret(className){
-            return $('<span>').addClass(className || 'caret');
-        }
-        
-        var selecting = false;
-        
-        function leafNodesBetween(base, nodeA, nodeB, filter){
-            base = $(base)[0];
-            nodeA = $(nodeA);
-            nodeB = $(nodeB);
-            var first = nodeB,
-                last = nodeA,
-                nodes = [];
-            if( nodeA.isBefore(nodeB) ){
-                first = nodeA;
-                last = nodeB;
-            }
-            var firstTop = first.parent()[0] === base ? first : first.parentsUntil(base).last();
-            var lastTop = last.parent()[0] === base ? last : last.parentsUntil(base).last();
-            first = first[0];
-            last = last[0];
-            if(firstTop[0] === lastTop[0]){
-                // leaves in firstTop that are between first and last
-                $.each(firstTop.leafNodes(), function(){
-                    if(
-                        first.compareDocumentPosition(this) & 4
-                        && this.compareDocumentPosition(last) & 4
-                    ){
-                        nodes.push(this);
-                    }
-                });
-            } else {
-                // leaves in the firstTop that are after first
-                $.each(firstTop.leafNodes(), function(){
-                    if(first.compareDocumentPosition(this) & 4){
-                        nodes.push(this);
-                    }
-                });
-                // leaves in the top nodes between firstTop and lastTop
-                nodes = nodes.concat(firstTop.nextUntil(lastTop).leafNodes())
-                // leaves in lastop that are before last
-                $.each(lastTop.leafNodes(), function(){
-                    if(this.compareDocumentPosition(last) & 4){
-                        nodes.push(this);
-                    }
-                });
-            }
-            if(typeof filter === 'string'){
-                var selector = filter;
-                filter = function(){ return $(this).is(selector); };
-            }
-            if(typeof filter === 'function'){
-                var nodeList = nodes;
-                nodes = [];
-                $.each(nodeList, function(){
-                    if(filter(this)){
-                        nodes.push(this);
-                    }
-                });
-            }
-            return nodes;
-        }
-        
-        function unmarkSelected(){
-            $('.editor').find('.selected-unwrap').contents().unwrap();
-            $('.editor').find('.selected').removeClass('selected');
-        }
-        
-        function markSelected(){
-            unmarkSelected();
-            var start = $('.editor').find('.caret-start');
-            var end = $('.editor').find('.caret')
-            var nodes = leafNodesBetween($('.editor'), start, end);
-            var selectedSpan = $('<span>').addClass('selected-unwrap');
-            console.log(nodes);
-            $.each(nodes, function(){
-                if(this.nodeType === 3){
-                    if(this.parentNode.childNodes.length === 1){
-                        // text node that is an only child
-                        $(this.parentNode).addClass('selected');
-                    } else {
-                        $(this).wrap(selectedSpan.clone());
-                    }
-                } else {
-                    // style-able node (e.g. <img>, <hr>)
-                    $(this).addClass('selected');
-                }
-            });
-        }
-        
-        $('.editor').on('mouseenter', '*', function(evt){           
-            var elt = $(this);
-            elt.spanify(true);
-            if(selecting && elt.is('.spanified')){
-                $('.editor').find('.caret').remove();
-                if((evt.clientX - elt.offset().left) < elt.width() / 2){
-                    caret().insertBefore(elt);
-                } else {
-                    caret().insertAfter(elt);
-                }
-                markSelected();
-            }
-            evt.preventDefault();
-            evt.stopPropagation();
-        }).on('mouseleave', '*', function(evt){
-            $(this).spanify(false);
-            evt.preventDefault();
-            evt.stopPropagation();
-        }).on('mousedown', '*', function(evt){
-            var elt = $(this);
-            if(elt.is('.spanified')){
-                $('.editor').find('.caret,.caret-start').remove();
-                if((evt.clientX - elt.offset().left) < elt.width() / 2){
-                    caret('caret-start').insertBefore(this);
-                } else {
-                    caret('caret-start').insertAfter(this);
-                }
-                selecting = true;
-            }
-            evt.preventDefault();
-            evt.stopPropagation();
-        }).on('mouseup', function(evt){
-            if(selecting){
-                selecting = false;
-                $(this).spanify(false);
-                markSelected();
-            }
-            evt.preventDefault();
-            evt.stopPropagation();
-        });
-    </script>
-    <script>
-    /*
         console.clear();
-        $('.editor').editor({tools: '.tools'});
-    */
+        // $('.editor').makeSelectable();
+        $('.editor').makeEditor({tools: '.tools'});
     </script>
 </body>
 </html>

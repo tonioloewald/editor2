@@ -4,33 +4,11 @@
   
 "use strict";
   
-$.fn.editor = function(options){
+$.fn.makeEditor = function(options){
     this.data('editor', new Editor(this, options));
     // console.log(this, this.data('editor'));
     return this;
 };
-
-$.fn.allowSelection = function(allow){
-    if(allow){
-        $(this).css({
-            '-webkit-touch-callout': 'text',
-            '-webkit-user-select': 'text',
-            '-khtml-user-select': 'text',
-            '-moz-user-select': 'text',
-            '-ms-user-select': 'text',
-            'user-select': 'text',
-        });
-    } else {
-        $(this).css({
-            '-webkit-touch-callout': 'none',
-            '-webkit-user-select': 'none',
-            '-khtml-user-select': 'none',
-            '-moz-user-select': 'none',
-            '-ms-user-select': 'none',
-            'user-select': 'none',
-        });
-    }
-}
 
 function Editor(elt, options){
     this.root = $(elt);
@@ -48,52 +26,6 @@ function Editor(elt, options){
     this.setup();
     
     return this;
-}
-
-/*
-    DOM traversal utilities
-*/
-function leafNodes(node, filter){
-    var nodeList = [];
-    if(node.length && node.nodeType === undefined){
-        // jQuery bag of nodes
-        $.each(node, function(){
-            nodeList = nodeList.concat(leafNodes(this));
-        });
-    } else if(!node.firstChild){
-        // leaf node (e.g. text or <hr>
-        nodeList.push(node);
-    } else {
-        // element
-        for(var i = 0; i < node.childNodes.length; i++){
-            nodeList = nodeList.concat(leafNodes(node.childNodes[i]));
-        }
-    }
-    if(filter){
-        var nodes = nodeList,
-            i,
-            nodeList = [];
-        if(typeof filter === 'string'){
-            for(i = 0; i < nodes.length; i++){
-                if($(nodes[i]).is(filter)){
-                    nodeList.push(nodes[i]);
-                }
-            }
-        } else if (typeof filter === 'function'){
-            for(i = 0; i < nodes.length; i++){
-                if(filter(nodes[i])){
-                    if(filter(nodes[i])){
-                        nodeList.push(nodes[i]);
-                    }
-                }
-            }
-        }
-    }
-    return nodeList;
-}
-
-$.fn.leafNodes = function(filter){
-    return leafNodes(this, filter);
 }
 
 function previousTextNode(node, base, cleanup){
@@ -319,8 +251,8 @@ Editor.prototype = {
         if(editor.insertionPoint()){
             var block = editor.block(editor.caret),
                 beforeBlock = block.clone(),
-                nodes = leafNodes(block),
-                beforeNodes = leafNodes(beforeBlock),
+                nodes = block.leafNodes(),
+                beforeNodes = beforeBlock.leafNodes(),
                 inBeforeBlock = false;
             if(nodes.length !== beforeNodes.length){
                 console.error('we are in bizarro world');
@@ -484,7 +416,7 @@ Editor.prototype = {
         
         var lastDitchSelection = editor.find('.editor-selected');
         if(lastDitchSelection.length){
-            return leafNodes(lastDitchSelection);
+            return lastDitchSelection.leafNodes();
         }
         
         if(startNode.node === endNode.node){
@@ -497,7 +429,7 @@ Editor.prototype = {
             startNode = startNode.node.splitText(startNode.offset);
             endNode = endNode.node.splitText(endNode.offset).previousSibling;
             
-            nodes = leafNodes(editor.selectedBlocks());
+            nodes = editor.selectedBlocks().leafNodes();
             
             var start = nodes.indexOf(startNode);
             var end = nodes.indexOf(endNode);
