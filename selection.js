@@ -111,24 +111,26 @@
     function Selectable(base){
         this.base = $(base);
         this.selecting = false;
+        this.setup();
         
         return this;
     }
     
     Selectable.prototype = {
         setup: function(){
-            this.allowSelection(false);
-            this.base.on('mouseenter', '*', function(evt){           
+            var sel = this;
+            sel.base.allowSelection(false);
+            sel.base.on('mouseenter', '*', function(evt){           
                 var elt = $(this);
                 elt.spanify(true);
-                if(selecting && elt.is('.spanified')){
-                    this.find('.caret').remove();
+                if(sel.selecting && elt.is('.spanified')){
+                    sel.find('.caret').remove();
                     if((evt.clientX - elt.offset().left) < elt.width() / 2){
                         caret().insertBefore(elt);
                     } else {
                         caret().insertAfter(elt);
                     }
-                    this.mark();
+                    sel.mark();
                 }
                 evt.preventDefault();
                 evt.stopPropagation();
@@ -139,22 +141,22 @@
             }).on('mousedown', '*', function(evt){
                 var elt = $(this);
                 if(elt.is('.spanified')){
-                    this.unmark();
-                    this.find('.caret,.caret-start').remove();
+                    sel.unmark();
+                    sel.find('.caret,.caret-start').remove();
                     if((evt.clientX - elt.offset().left) < elt.width() / 2){
                         caret('caret-start').insertBefore(this);
                     } else {
                         caret('caret-start').insertAfter(this);
                     }
-                    selecting = true;
+                    sel.selecting = true;
                 }
                 evt.preventDefault();
                 evt.stopPropagation();
             }).on('mouseup', function(evt){
-                if(selecting){
-                    selecting = false;
+                if(sel.selecting){
+                    sel.selecting = false;
                     $(this).spanify(false);
-                    this.mark();
+                    sel.mark();
                 }
                 evt.preventDefault();
                 evt.stopPropagation();
@@ -166,13 +168,41 @@
         unmark: function(){
             this.find('.selected-unwrap').contents().unwrap();
             this.find('.selected').removeClass('selected');
+            this.find('.selected-block').removeClass('selected-block');
+            this.find('.first-block').removeClass('first-block');
+            this.find('.last-block').removeClass('last-block');
+        },
+        markRange: function(first, last){
+            this.find('.caret,.caret-start').remove();
+            first = first.parentsUntil(this.base).last();
+            last = last.parentsUntil(this.base).last();
+            first.prepend(this.caret('select-start'));
+            last.append(this.caret());
+            this.mark();
         },
         mark: function(){
             this.unmark();
             var start = this.find('.caret-start');
-            var end = this.find('.caret')
+            var end = this.find('.caret');
+            if(end.length === 0){ 
+                end = start; 
+            } else if(end.isBefore(start)){
+                var temp = start;
+                start = end;
+                end = temp;
+            }
+            
             var nodes = leafNodesBetween(this.base, start, end);
+            var firstTopNode = start.parentsUntil(this.base).last().addClass('first-block');
+            var lastTopNode = end.parentsUntil(this.base).last().addClass('last-block');
             var selectedSpan = $('<span>').addClass('selected-unwrap');
+            firstTopNode.addClass('selected-block');
+            if(firstTopNode[0] !== lastTopNode[0]){
+                firstTopNode.add(firstTopNode.nextUntil(lastTopNode))
+                            .add(lastTopNode)
+                            .addClass('selected-block');
+            }
+            
             $.each(nodes, function(){
                 if(this.nodeType === 3){
                     if(this.parentNode.childNodes.length === 1){

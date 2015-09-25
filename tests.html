@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Tests</title>
+    <style>
+        html {
+            background-color: #ddd;
+            font: 14px "Helvetica Neue", Helvetica, Arial, sans-serif;
+        }
+        .editor {
+            border: 1px solid #aaa;
+            font: 14px Georgia, serif;
+            height: 600px;
+            background: #ccc;
+            overflow-y: scroll;
+        }
+        .editor > * {
+            position: relative;
+            padding: 8px 12px;
+            background: white;
+            margin: 0;
+            margin-right: 224px;
+        }
+        .editor > blockquote {
+            padding: 8px 48px;
+        }
+        .editor .current {
+            background: #ddf;
+        }
+        .editor hr {
+            padding: 0;
+        }
+        .editor-bold {
+            font-weight: bold;
+        }
+        .editor-italic {
+            font-style: italic;
+        }
+        .editor-annotation:after {
+            position: relative;
+            top: -4px;
+            content: "\2020";
+        }
+        .editor-annotation > span {
+            display: block;
+            padding: 4px 8px;
+            font-weight: normal;
+            font-style: normal;
+            font-size: 12px "Helvetica Neue", Helvetica, Arial, Sans-serif;
+            background-color: #ffc;
+            position: absolute;
+            right: -212px;
+            max-width: 200px;
+        }
+        .noselect {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        body {
+            background: #eee;
+            margin: auto;
+            max-width: 1000px;
+            padding: 50px 75px;
+        }
+        .first-block, .last-block {
+            position: relative;
+        }
+        .first-block:before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            background-color: #afa;
+            width: 4px;
+        }
+        .last-block:after {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #faa;
+            width: 4px;
+        }
+        .caret, .caret-start {
+            display: inline-block;
+            height: 20px;
+            width: 2px;
+            margin-left: -1px;
+            margin-right: -1px;
+            margin-bottom: -4px;
+            margin-top: -6px;
+            background-color: black;
+        }
+        .caret-start {
+            background-color: blue;
+        }
+        
+        .caret {
+            animation: blink 1s steps(2, start) infinite;
+            -webkit-animation: blink 1s steps(2, start) infinite;
+        }
+        @keyframes blink {
+            to {
+                background-color: transparent;
+            }
+        }
+        @-webkit-keyframes blink {
+            to {
+                background-color: transparent;
+            }
+        }
+        .tools button {
+            background-color: #ccc;
+        }
+        .editor-active-for-selection {
+            background-color: #bbd;
+        }
+        /*
+        .spanified {
+            background-color: rgba(0,0,255,0.1);
+        }
+        .spanified+.spanified:nth-child(2n){
+            background-color: rgba(255,0,0,0.1);
+        }
+        */
+        .selected, .selected-unwrap {
+            background-color: rgba(0,0,255,0.3);
+        }
+    </style>
+</head>
+<body>
+    <h1>Editor2</h1>
+    <p>
+        This is an experimental editor that uses pure HTML does not use execCommand
+        or HTML5 contenteditable at all.
+    </p>
+    <p>
+        Test 
+        <b>Hierachy</b>
+        <i>for</i>
+        Node
+        <hr>
+        How well
+        <blockquote>
+            does
+            <b>it</b>
+        </blockquote>
+        <blockquote>
+            <b>work</b>
+            ?
+        </blockquote>
+    </p>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+    <script src="shared.js"></script>
+    <script src="editor2.js"></script>
+    <script src="editorX.js"></script>
+    <script src="selection.js"></script>
+    <ul>
+    </ul>
+    <script> /* TESTS */
+        console.clear();
+        var node = $('h1');
+        while( node = node.nextLeafNode() ){
+            $('<ul>').append('<li>' + node[0].textContent + '</li>');
+        }
+    </script>
+</body>
+</html>

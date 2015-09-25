@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <title>Editor2 Proof of Concept</title>
+    <title>Selectable</title>
     <style>
         html {
             background-color: #ddd;
@@ -25,7 +25,7 @@
         .editor > blockquote {
             padding: 8px 48px;
         }
-        .editor .selected-block, .editor.current {
+        .editor .selected-block, .editor .current {
             background: #ddf;
         }
         .editor hr {
@@ -138,7 +138,7 @@
     </style>
 </head>
 <body>
-    <h1>Editor2</h1>
+    <h1>Selectable</h1>
     <p>
         This is an experimental editor that uses pure HTML does not use execCommand
         or HTML5 contenteditable at all.
@@ -315,8 +315,8 @@
     </script>
     <script>
         console.clear();
-        // $('.editor').makeSelectable();
-        $('.editor').makeEditor({tools: '.tools'});
+        $('.editor').makeSelectable();
+        //$('.editor').makeEditor({tools: '.tools'});
     </script>
 </body>
 </html>

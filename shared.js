@@ -2,6 +2,8 @@
     # Shared Utilities
 */
 
+(function($){
+
 $.fn.isBefore = function(otherElt){
     /*
         https://developer.mozilla.org/en-US/docs/Web/API/Node/compareDocumentPosition
@@ -17,6 +19,59 @@ $.fn.isBefore = function(otherElt){
     return this[0].compareDocumentPosition($(otherElt)[0]) & 4;
 }
 
+$.fn.siblingOrder = function(){
+    var node = this[0];    
+    var parent = node.parentNode;
+    var position = -1;
+    if(parent){
+        $.each(parent.childNodes, function(idx){
+            if(this === node){
+                position = idx;
+                return false;
+            }
+        });
+    }
+    return position;
+}
+
+$.fn.firstLeafNode = function(){
+    var node = this[0];
+    while(node.firstChild){
+        node = node.firstChild;
+    }
+    return $(node);
+}
+
+$.fn.lastLeafNode = function(){
+    var node = this[0];
+    while(node.lastChild){
+        node = node.lastChild;
+    }
+    return $(node);
+}
+
+$.fn.nextLeafNode = function(base, filter){
+    var node = this[0];
+    if(node.nextSibling){
+        return $(node.nextSibling).firstLeafNode();
+    } else if (node.parentNode !== (base || document.body)){
+        return $(node.parentNode).nextLeafNode();
+    } else {
+        return null;
+    }
+}
+
+$.fn.previousLeafNode = function(base, filter){
+    var node = this[0];
+    if(node.previousSibling){
+        return $(node.previousSibling).lastLeafNode();
+    } else if (node.parentNode !== (base || document.body)){
+        return $(node.parentNode).previousLeafCode();
+    } else {
+        return null;
+    }
+}
+
 $.fn.allowSelection = function(allow){
     if(allow){
         $(this).css({
@@ -25,7 +80,7 @@ $.fn.allowSelection = function(allow){
             '-khtml-user-select': 'text',
             '-moz-user-select': 'text',
             '-ms-user-select': 'text',
-            'user-select': 'text',
+            'user-select': 'text'
         });
     } else {
         $(this).css({
@@ -34,13 +89,11 @@ $.fn.allowSelection = function(allow){
             '-khtml-user-select': 'none',
             '-moz-user-select': 'none',
             '-ms-user-select': 'none',
-            'user-select': 'none',
+            'user-select': 'none'
         });
     }
     return this;
 }
-
-(function($){
 /*
     DOM traversal utilities
 */

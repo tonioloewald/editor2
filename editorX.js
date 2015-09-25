@@ -12,6 +12,10 @@ $.fn.makeEditor = function(options){
 
 function Editor(elt, options){
     this.root = $(elt);
+    if(elt.data().selectable){
+        elt.makeSelectable();
+    }
+    this.selectable = elt.data().selectable;
     this.options = $.extend({}, options);
     
     var defaults = {
@@ -26,59 +30,6 @@ function Editor(elt, options){
     this.setup();
     
     return this;
-}
-
-function previousTextNode(node, base, cleanup){
-	if(!base){
-        base = document;
-    }
-    if(!cleanup){
-        cleanup = false;
-    } else {
-        cleanup = [];
-    }
-    node = $(node)[0];
-    var path = [node];
-	do {
-	    if(cleanup && node.nodeType === 3 && node.textContent.trim().length === 0){
-	        cleanup.push(node);
-	    }
-        if(node.previousSibling){
-            node = node.previousSibling;
-            path.push(node);
-            while ( node.firstChild ){
-                node = node.childNodes[node.childNodes.length -1];
-            	path.push(node);
-            }
-        } else if( node.parentNode === base ){
-            node = false;
-            path.push(node);
-            break;
-        } else {
-            node = node.parentNode;
-            path.push(node);
-        }
-    } while (node.nodeType !== 3 || node.textContent.trim().length === 0 );
-    if(cleanup.length){
-        $.each(cleanup, function(){ $(this).remove(); });
-        if(node.nodeType === 3){
-            node.nodeValue = node.textContent + " ";
-        }
-    }
-    // console.log(path);
-    return node;
-}
-
-// TODO
-function nextTextNode(){
-}
-
-function ensureNonEmpty(nodes){
-    $(nodes).each(function(){
-        if($(this).contents().length === 0){
-            $(this).append(document.createTextNode(""));
-        }
-    });
 }
 
 Editor.prototype = {
@@ -116,7 +67,7 @@ Editor.prototype = {
         
         if(editor.options.tools){
             editor.tools = $(editor.options.tools).on('click.editor', 'button', editor, editor.doCommand)
-            				                      .on('change.editor', 'select', editor, editor.doCommand);
+                                                  .on('change.editor', 'select', editor, editor.doCommand);
         }
         editor.root.on('click.editor', '.editor-annotation', function(evt){
             var target = $(evt.target);
@@ -133,19 +84,26 @@ Editor.prototype = {
     commands: {
         setBlocks: function(newNodeType){
             var editor = this,
-                blocks = editor.find('.current');
+                blocks = editor.find('.selected-block');
                 
             blocks.each(function(){
                 var newBlock = $('<' + newNodeType + '>').append($(this).contents())
-                                                           .addClass('current');
+                                                           .addClass('selected-block');
                 $(this).replaceWith(newBlock);
             });
             
-            blocks = editor.find('.current');
+            blocks = editor.find('.selected-block');
+            editor.selectable.markRange(blocks.first(), blocks.last());
             
-            // select the entirety of the newly styled blocks
-            ensureNonEmpty(blocks.first().add(blocks.last()));
-            editor.setSelection([blocks.first().contents()[0], blocks.last().contents().last()[0]]);
+            /*
+                TO DO
+                verify this is not needed
+                // select the entirety of the newly styled blocks
+                ensureNonEmpty(blocks.first().add(blocks.last()));
+            /* 
+                TO DO replace this:
+                editor.setSelection([blocks.first().contents()[0], blocks.last().contents().last()[0]]);
+            */
         },
         setText: function(className){
             var editor = this,
@@ -204,7 +162,7 @@ Editor.prototype = {
     mouseup: function(evt){
         // console.log('mouseup', evt);
         var editor = evt.data;
-      	editor.recordSelection();
+        editor.recordSelection();
     },
     contentKey: function(key){
         var editor = this;
@@ -314,13 +272,13 @@ Editor.prototype = {
         }
     },
     keypress: function(evt){
-      	// console.log('keypress', evt);
+        // console.log('keypress', evt);
         var editor = evt.data;
-      	
-      	// don't process shortcuts (yet!)
-      	if(evt.ctrlKey || evt.metaKey){
-      	    editor.shortcut(evt);
-      	} else {
+        
+        // don't process shortcuts (yet!)
+        if(evt.ctrlKey || evt.metaKey){
+            editor.shortcut(evt);
+        } else {
             if(!editor.insertionPoint()){
                 editor.deleteSelection();
             }
@@ -334,17 +292,17 @@ Editor.prototype = {
                     editor.contentKey(evt.which);
                     break;
             }
-      	}
-      	editor.updateUndo();
-      	
-      	evt.preventDefault();
-      	evt.stopPropagation();
+        }
+        editor.updateUndo();
+        
+        evt.preventDefault();
+        evt.stopPropagation();
     },
     updateUndo: function(command){
-      	var editor = this;
-      	if(editor.undo === undefined){
-      	    command = "init";
-      	}
+        var editor = this;
+        if(editor.undo === undefined){
+            command = "init";
+        }
         switch(command){
             case "init":                
                 console.log('initializing undo');
@@ -384,16 +342,16 @@ Editor.prototype = {
                     editor.undo[0] = editor.root.html();
                 }
         }
-      	editor.tools.find('[value="updateUndo undo"]')
-      	            .prop('disabled', editor.undoDepth >= editor.undo.length - 1);
-      	editor.tools.find('[value="updateUndo redo"]')
-      	            .prop('disabled', editor.undoDepth === 0);
+        editor.tools.find('[value="updateUndo undo"]')
+                    .prop('disabled', editor.undoDepth >= editor.undo.length - 1);
+        editor.tools.find('[value="updateUndo redo"]')
+                    .prop('disabled', editor.undoDepth === 0);
     },
     shortcut: function(evt){
-      	console.log('shortcut', evt);
-      	
-      	evt.preventDefault();
-      	evt.stopPropagation();
+        console.log('shortcut', evt);
+        
+        evt.preventDefault();
+        evt.stopPropagation();
     },
     find: function(selector){
         return this.root.find(selector);
@@ -407,37 +365,7 @@ Editor.prototype = {
     selectedLeafNodes: function(){
         var editor = this;
         var nodes = [];
-        if(editor.insertionPoint()){
-            return nodes;
-        }
-        
-        var startNode = editor.nodeFromPath('data-selection-start');
-        var endNode = editor.nodeFromPath('data-selection-end');
-        
-        var lastDitchSelection = editor.find('.editor-selected');
-        if(lastDitchSelection.length){
-            return lastDitchSelection.leafNodes();
-        }
-        
-        if(startNode.node === endNode.node){
-            nodes.push( startNode.node
-                                 .splitText(startNode.offset)
-                                 .splitText(endNode.offset - startNode.offset)
-                                 .previousSibling
-                      );
-        } else {
-            startNode = startNode.node.splitText(startNode.offset);
-            endNode = endNode.node.splitText(endNode.offset).previousSibling;
-            
-            nodes = editor.selectedBlocks().leafNodes();
-            
-            var start = nodes.indexOf(startNode);
-            var end = nodes.indexOf(endNode);
-            
-            nodes = nodes.splice(start, end - start + 1);
-        }
-
-        return nodes;
+        // TODO
     },
     // scrupulously deletes all selected leaf nodes (and parent nodes left empty)
     // and merges the first and last blocks if the selection spanned multiple blocks
@@ -465,24 +393,6 @@ Editor.prototype = {
         editor.forgetSelection(true);
         editor.updateUndo("new");
     },
-    // callback is a function which is passed range as a parameter
-    // if an array of nodes is called, it will select from the first to the last
-    setSelection: function(callback){
-        var editor = this;       
-        var range = document.createRange();
-        var selection = window.getSelection();
-        selection.empty();
-        if(typeof callback === 'function'){
-            callback(range);
-        } else if (callback.constructor === Array) {
-            // console.log(callback[0], callback[callback.length - 1]);
-            range.setStartBefore(callback[0]);
-            range.setEndAfter(callback.pop());
-        }
-        selection.removeAllRanges();
-        selection.addRange(range);
-        this.recordSelection(true);
-    },
     // gets the top level block containing the node
     block: function(node){
         var b = node;
@@ -498,111 +408,28 @@ Editor.prototype = {
     },
     // returns the top level blocks containing the selection range
     selectedBlocks: function(){
-        var blocks;
-            
-        this.find('.first-block').removeClass('first-block');
-        this.find('.last-block').removeClass('last-block');
-        if(this.insertionPoint()){
-            blocks = this.block(this.caret).addClass('first-block last-block');
-        } else {
-            var first = this.block(this.find('[data-selection-start]')).addClass('first-block');
-            var last = this.block(this.find('[data-selection-end]')).addClass('last-block');
-            blocks = first.add(first.nextUntil(last.next()));
-        }
-        return blocks;
-    },
-    // removes the selection information from the DOM
-    forgetSelection: function(keepCaret){
-        // this.root.css(cssNoSelect);
-        this.find('[data-selection-start]').removeAttr('data-selection-start');
-        this.find('[data-selection-end]').removeAttr('data-selection-end');
-        this.find('.current').removeClass('current');
-        this.find('.editor-selected').removeClass('editor-selected');
-        this.find('.editor-selection-wrapper').contents().unwrap();
-        if(keepCaret){
-            window.getSelection().empty();
-        } else {
-            this.find('.caret').detach();
-        }
-        // this.root.css(cssSelect);
-    },
-    // given a selection attribute (e.g. data-selection-start)
-    // recovers a selection bound stored using recordSelectionBound
-    nodeFromPath: function(pathAttribute){
-        var node = this.find('[' + pathAttribute + ']'),
-            path = node.attr(pathAttribute)
-                       .split(',')
-                       .map( function(x){ return parseInt(x, 10); });
-        node = node[0];
-        while(path.length > 1){
-            node = node.childNodes[path.pop()];
-        }
-        return { node: node, offset: path[0] };
-    },
-    // restores the selection based on information in the DOM
-    restoreSelection: function(){
-        var editor = this,
-            nodes = editor.selectedLeafNodes();
-        editor.setSelection(nodes);
+        /* TODO */
     },
     // if the caret is within the root then it is the insertion point
     insertionPoint: function(){
-        if( $.contains(this.root[0], this.caret[0]) ){
-            return true;
-        } else {
-            return false;
-        }
-    },
-    // stores a selection bound as an offset and node-path
-    // e.g. 1,2,3 would mean after character 3 of node.childNodes[1].childNodes[3] 
-    // (which will be a text node)
-    recordSelectionBound: function(node, attribute, value){
-        if(!node){
-            return;
-        }
-        var nodePath = [value];
-        node = $(node);
-        while(node.length && node[0].parentNode !== this.root[0]){
-            nodePath.push( this.siblingOrder() );
-            node = node.parent();
-        }
-        // console.log(node, attribute, nodePath.join());
-        node.attr(attribute, nodePath.join());
+        return !!editor.root.find('.caret').length;
     },
     updateParagraphStyleMenu: function(){
         var menu = this.tools.find('select[name="paragraph-style"]'),
-            currentBlockType;
+           .selected-blockBlockType;
         if(!menu.length){
             return;
         }
-        this.selectedBlocks().addClass('current').each(function(){
-            if(currentBlockType === undefined){
-                currentBlockType = this.nodeName;
-            } else if (currentBlockType !== this.nodeName){
-                currentBlockType = false;
+        this.selectedBlocks().addClass(.selected-block').each(function(){
+            if.selected-blockBlockType === undefined){
+               .selected-blockBlockType = this.nodeName;
+            } else if .selected-blockBlockType !== this.nodeName){
+               .selected-blockBlockType = false;
             }
         });
-        if(currentBlockType){
-            menu.val('setBlocks ' + currentBlockType.toLowerCase());
+        if.selected-blockBlockType){
+            menu.val('setBlocks ' +.selected-blockBlockType.toLowerCase());
         }
-    },
-    // records selection information into the DOM
-    recordSelection: function(keepCaret){
-        this.forgetSelection(keepCaret);
-        this.normalize();
-        var selection = window.getSelection();
-        var range = selection && selection.getRangeAt && selection.rangeCount === 1 && selection.getRangeAt(0);
-        if(range.startContainer === range.endContainer && range.startOffset === range.endOffset){
-            if(range.startContainer && range.startContainer.splitText){
-                $(range.startContainer.splitText(range.startOffset)).before(this.caret);
-            } else {
-                $(range.startContainer).prepend(this.caret);
-            }
-        }
-        this.recordSelectionBound(range.startContainer, 'data-selection-start', range.startOffset);
-        this.recordSelectionBound(range.endContainer, 'data-selection-end', range.endOffset);
-        this.updateParagraphStyleMenu();
-        this.updateUndo("new");
     }
 };
 }(jQuery));
