@@ -24,21 +24,37 @@
         return node.nodeType === 3;
     }
     
-    $.fn.spanify = function(makeSpans){
+    $.fn.spanify = function(makeSpans, byWord){
         if(makeSpans){
             var textNodes = this.leafNodes(isTextNode),
                 container = $('<span>'),
+                wordSpan = $('<span>').addClass('spanified-word');
                 charSpan = $('<span>').addClass('spanified');
             $.each(textNodes, function(){
-                if(this.length > 1){
+                // for selection by chars
+                // var pieces = new String(this.textContent);
+                // for selection by words:
+                var pieces;
+                if(byWord){
+                    pieces = this.textContent.match(/\s+|[^\s]+/g);
+                } else {
+                    pieces = new String(this.textContent);
+                }
+                if(pieces.length > 1){
                     $(this).parent().removeClass('spanified');
-                    $.each(new String(this.textContent), function(){
-                        container.append(charSpan.clone().text(this));
+                    $.each(pieces, function(){
+                        if(this.trim().length > 1){
+                            console.log("" + this);
+                            container.append(wordSpan.clone().text(this).spanify(true));
+                        } else {
+                            container.append(charSpan.clone().text(this));
+                        }
                     });
                     $(this).replaceWith(container.contents());
                 }
             });
         } else {
+            this.find('.spanified-word').contents().unwrap();
             this.find('.spanified').contents().unwrap();
             this.each(function(){
                 this.normalize();
@@ -120,9 +136,9 @@
         setup: function(){
             var sel = this;
             sel.base.allowSelection(false);
-            sel.base.on('mouseenter', '*', function(evt){           
+            sel.base.on('mousemove', '*', function(evt){           
                 var elt = $(this);
-                elt.spanify(true);
+                elt.spanify(true, true);
                 if(sel.selecting && elt.is('.spanified')){
                     sel.find('.caret').remove();
                     if((evt.clientX - elt.offset().left) < elt.width() / 2){
