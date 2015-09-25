@@ -4,6 +4,13 @@
 
 (function($){
 
+$.fn.loadFragment = function(url){
+    var elt = this;
+    $.ajax(url).success(function(html){
+        var content = $('<div>').append(html).contents().appendTo(elt);
+    });
+}
+
 $.fn.isBefore = function(otherElt){
     /*
         https://developer.mozilla.org/en-US/docs/Web/API/Node/compareDocumentPosition

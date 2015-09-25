@@ -1,0 +1,135 @@
+
+html {
+    background-color: #ddd;
+    font: 14px "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+.editor {
+    border: 1px solid #aaa;
+    font: 14px Georgia, serif;
+    height: 600px;
+    background: #ccc;
+    overflow-y: scroll;
+}
+.editor > * {
+    position: relative;
+    padding: 8px 12px;
+    background: white;
+    margin: 0;
+    margin-right: 224px;
+}
+.editor > blockquote {
+    padding: 8px 48px;
+}
+.editor .selected-block, .editor .current {
+    background: #ddf;
+}
+.editor hr {
+    padding: 0;
+}
+.editor-bold {
+    font-weight: bold;
+}
+.editor-italic {
+    font-style: italic;
+}
+.editor-annotation:after {
+    position: relative;
+    top: -4px;
+    content: "\2020";
+}
+.editor-annotation > span {
+    display: block;
+    padding: 4px 8px;
+    font-weight: normal;
+    font-style: normal;
+    font-size: 12px "Helvetica Neue", Helvetica, Arial, Sans-serif;
+    background-color: #ffc;
+    position: absolute;
+    right: -212px;
+    max-width: 200px;
+}
+.noselect {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+body {
+    background: #eee;
+    margin: auto;
+    max-width: 1000px;
+    padding: 50px 75px;
+}
+.first-block, .last-block {
+    position: relative;
+}
+.first-block:before {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    background-color: #afa;
+    width: 4px;
+}
+.last-block:after {
+    content: " ";
+    display: block;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #faa;
+    width: 4px;
+}
+.caret, .caret-start {
+    display: inline-block;
+    height: 20px;
+    width: 2px;
+    margin-left: -1px;
+    margin-right: -1px;
+    margin-bottom: -4px;
+    margin-top: -6px;
+    background-color: black;
+}
+.caret-start {
+    background-color: blue;
+}
+
+.caret {
+    animation: blink 1s steps(2, start) infinite;
+    -webkit-animation: blink 1s steps(2, start) infinite;
+}
+@keyframes blink {
+    to {
+        background-color: transparent;
+    }
+}
+@-webkit-keyframes blink {
+    to {
+        background-color: transparent;
+    }
+}
+.tools button {
+    background-color: #ccc;
+}
+.editor-active-for-selection {
+    background-color: #bbd;
+}
+.spanified-word {
+    display: inline-block;
+}
+/*
+.spanified {
+    background-color: rgba(0,0,255,0.1);
+}
+.spanified+.spanified:nth-child(2n){
+    background-color: rgba(255,0,0,0.1);
+}
+*/
+.selected, .selected-unwrap {
+    background-color: rgba(0,0,255,0.3);
+}

@@ -150,10 +150,6 @@
                 }
                 evt.preventDefault();
                 evt.stopPropagation();
-            }).on('mouseleave', '*', function(evt){
-                $(this).spanify(false);
-                evt.preventDefault();
-                evt.stopPropagation();
             }).on('mousedown', '*', function(evt){
                 var elt = $(this);
                 if(elt.is('.spanified')){
@@ -171,7 +167,7 @@
             }).on('mouseup', function(evt){
                 if(sel.selecting){
                     sel.selecting = false;
-                    $(this).spanify(false);
+                    $(this).children().not('.selected-block').spanify(false);
                     sel.mark();
                 }
                 evt.preventDefault();
