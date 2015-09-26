@@ -164,7 +164,7 @@
                 evt.preventDefault();
                 evt.stopPropagation();
             }).on('mouseup', function(evt){
-                console.log(sel.selecting);
+                // console.log(sel.selecting);
                 if(sel.selecting){
                     sel.extendSelection();
                     sel.selecting = false;
@@ -174,7 +174,7 @@
             });
         },
         removeCarets: function(){
-            console.log('removing carets');
+            // console.log('removing carets');
             this.find('.caret,.caret-start').remove();
             return this;
         },
@@ -227,8 +227,8 @@
                 last = last.previousLeafNode();
             }
             this.removeCarets();
-            console.log('placing carets at range boundaries', first, last);
             
+            // console.log('placing carets at range boundaries', first, last);
             if(first.isBefore(last)){
                 caret('caret-start').insertBefore(first.firstLeafNode());
                 caret().insertAfter(last.lastLeafNode());
@@ -254,7 +254,6 @@
             }
             
             var nodes = leafNodesBetween(this.root, start, end);
-            console.log($(nodes).text());
             var firstTopNode = start.parentsUntil(this.root).last().addClass('first-block');
             var lastTopNode = end.parentsUntil(this.root).last().addClass('last-block');
             var selectedSpan = $('<span>').addClass('selected-unwrap');

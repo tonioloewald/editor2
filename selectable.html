@@ -8,8 +8,10 @@
 <body>
     <h1>Selectable</h1>
     <p>
-        This is an experimental editor that uses pure HTML does not use execCommand
-        or HTML5 contenteditable at all.
+        This implements text selection without using the browser's native selection
+        behavior or native APIs, allowing complete control over the behavior of selections.
+        On its own, Selectable replaces non-editable (but selectables, copyable, etc.)
+        text.
     </p>
     <div class="tools"></div>
     <div class="editor"></div>

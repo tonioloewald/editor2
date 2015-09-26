@@ -23,7 +23,13 @@ $.fn.isBefore = function(otherElt){
         16 -- nodeA contains nodeB
         32 -- ¯\_(ツ)_/¯
     */
-    return this[0].compareDocumentPosition($(otherElt)[0]) & 4;
+    var answer = false;
+    if(this.length && $(otherElt).length){  
+        answer = this[0].compareDocumentPosition($(otherElt)[0]) & 4
+    } else {
+        console.warn('isBefore passed bad inputs:', this, otherElt);
+    }
+    return answer;
 }
 
 $.fn.siblingOrder = function(){
