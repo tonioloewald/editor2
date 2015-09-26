@@ -153,12 +153,16 @@
                 var elt = $(this);
                 sel.selecting = evt.originalEvent.detail;
                 if(elt.is('.spanified')){
-                    sel.unmark();
-                    sel.removeCarets();
-                    if((evt.clientX - elt.offset().left) < elt.width() / 2){
-                        caret('caret-start').insertBefore(this);
+                    if(sel.selecting === 1){
+                        sel.unmark();
+                        sel.removeCarets();
+                        if((evt.clientX - elt.offset().left) < elt.width() / 2){
+                            caret('caret-start').insertBefore(this);
+                        } else {
+                            caret('caret-start').insertAfter(this);
+                        }
                     } else {
-                        caret('caret-start').insertAfter(this);
+                        sel.extendSelection();
                     }
                 }
                 evt.preventDefault();
