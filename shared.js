@@ -73,7 +73,7 @@ $.fn.previousLeafNode = function(base, filter){
     if(node.previousSibling){
         return $(node.previousSibling).lastLeafNode();
     } else if (node.parentNode !== (base || document.body)){
-        return $(node.parentNode).previousLeafCode();
+        return $(node.parentNode).previousLeafNode();
     } else {
         return null;
     }

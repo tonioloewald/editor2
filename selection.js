@@ -8,7 +8,7 @@
     ## TO DO
     
     Implement touch controls
-    Move common base jQuery extensions out into their own file
+    Move common root jQuery extensions out into their own file
 */
 (function($){
     $.fn.makeSelectable = function(){
@@ -44,7 +44,6 @@
                     $(this).parent().removeClass('spanified');
                     $.each(pieces, function(){
                         if(this.trim().length > 1){
-                            console.log("" + this);
                             container.append(wordSpan.clone().text(this).spanify(true));
                         } else {
                             container.append(charSpan.clone().text(this));
@@ -63,8 +62,8 @@
         return this;
     }
     
-    function leafNodesBetween(base, nodeA, nodeB, filter){
-        base = $(base)[0];
+    function leafNodesBetween(root, nodeA, nodeB, filter){
+        root = $(root)[0];
         nodeA = $(nodeA);
         nodeB = $(nodeB);
         var first = nodeB,
@@ -74,8 +73,8 @@
             first = nodeA;
             last = nodeB;
         }
-        var firstTop = first.parent()[0] === base ? first : first.parentsUntil(base).last();
-        var lastTop = last.parent()[0] === base ? last : last.parentsUntil(base).last();
+        var firstTop = first.parent()[0] === root ? first : first.parentsUntil(root).last();
+        var lastTop = last.parent()[0] === root ? last : last.parentsUntil(root).last();
         first = first[0];
         last = last[0];
         if(firstTop[0] === lastTop[0]){
@@ -124,8 +123,8 @@
         return $('<span>').addClass(className || 'caret');
     }
     
-    function Selectable(base){
-        this.base = $(base);
+    function Selectable(root){
+        this.root = $(root);
         this.selecting = false;
         this.setup();
         
@@ -135,8 +134,8 @@
     Selectable.prototype = {
         setup: function(){
             var sel = this;
-            sel.base.allowSelection(false);
-            sel.base.on('mousemove', '*', function(evt){           
+            sel.root.allowSelection(false);
+            sel.root.on('mousemove', '*', function(evt){           
                 var elt = $(this);
                 elt.spanify(true, true);
                 if(sel.selecting && elt.is('.spanified')){
@@ -146,36 +145,69 @@
                     } else {
                         caret().insertAfter(elt);
                     }
-                    sel.mark();
+                    sel.extendSelection();
                 }
                 evt.preventDefault();
                 evt.stopPropagation();
             }).on('mousedown', '*', function(evt){
                 var elt = $(this);
+                sel.selecting = evt.originalEvent.detail;
                 if(elt.is('.spanified')){
                     sel.unmark();
-                    sel.find('.caret,.caret-start').remove();
+                    sel.removeCarets();
                     if((evt.clientX - elt.offset().left) < elt.width() / 2){
                         caret('caret-start').insertBefore(this);
                     } else {
                         caret('caret-start').insertAfter(this);
                     }
-                    sel.selecting = true;
                 }
                 evt.preventDefault();
                 evt.stopPropagation();
             }).on('mouseup', function(evt){
+                console.log(sel.selecting);
                 if(sel.selecting){
+                    sel.extendSelection();
                     sel.selecting = false;
-                    $(this).children().not('.selected-block').spanify(false);
-                    sel.mark();
                 }
                 evt.preventDefault();
                 evt.stopPropagation();
             });
         },
+        removeCarets: function(){
+            console.log('removing carets');
+            this.find('.caret,.caret-start').remove();
+            return this;
+        },
+        extendSelection: function(){
+            var sel = this, first, last;
+            switch(sel.selecting){
+                case 1:
+                    sel.mark();
+                    sel.root.children().not('.selected-block').spanify(false);
+                    break;
+                case 2:
+                    // word select
+                    first = sel.find('.caret-start').closest('.spanified-word');
+                    last = sel.find('.caret').closest('.spanified-word');
+                    if(!last.length){
+                        last = first;
+                    }
+                    sel.markRange(first, last);
+                    break;
+                default:
+                    // block select
+                    first = sel.find('.caret-start').parentsUntil(sel.root).last();
+                    last = sel.find('.caret').parentsUntil(sel.root).last();
+                    if(last.length === 0){
+                        last = first;
+                    }
+                    sel.markRange(first, last);
+                    break;
+            }
+            return this;
+        },
         find: function(selector){
-            return this.base.find(selector);
+            return this.root.find(selector);
         },
         unmark: function(){
             this.find('.selected-unwrap').contents().unwrap();
@@ -185,28 +217,46 @@
             this.find('.last-block').removeClass('last-block');
         },
         markRange: function(first, last){
-            this.find('.caret,.caret-start').remove();
-            first = first.parentsUntil(this.base).last();
-            last = last.parentsUntil(this.base).last();
-            first.prepend(this.caret('select-start'));
-            last.append(this.caret());
+            if(first.length === 0 || last.length === 0){
+                console.error('Bad range, missing boundary', first, last);
+            }
+            if(first.is('.caret-start,.caret')){
+                first = first.nextLeafNode();
+            }
+            if(last.is('.caret,.caret-start')){
+                last = last.previousLeafNode();
+            }
+            this.removeCarets();
+            console.log('placing carets at range boundaries', first, last);
+            
+            if(first.isBefore(last)){
+                caret('caret-start').insertBefore(first.firstLeafNode());
+                caret().insertAfter(last.lastLeafNode());
+            } else {
+                caret().insertBefore(last.firstLeafNode());
+                caret('caret-start').insertAfter(first.lastLeafNode());
+            }
             this.mark();
+            return this;
         },
         mark: function(){
             this.unmark();
             var start = this.find('.caret-start');
             var end = this.find('.caret');
-            if(end.length === 0){ 
+            if(start.length === 0){
+                return;
+            } else if(end.length === 0){ 
                 end = start; 
-            } else if(end.isBefore(start)){
+            } else if(end.length && end.isBefore(start)){
                 var temp = start;
                 start = end;
                 end = temp;
             }
             
-            var nodes = leafNodesBetween(this.base, start, end);
-            var firstTopNode = start.parentsUntil(this.base).last().addClass('first-block');
-            var lastTopNode = end.parentsUntil(this.base).last().addClass('last-block');
+            var nodes = leafNodesBetween(this.root, start, end);
+            console.log($(nodes).text());
+            var firstTopNode = start.parentsUntil(this.root).last().addClass('first-block');
+            var lastTopNode = end.parentsUntil(this.root).last().addClass('last-block');
             var selectedSpan = $('<span>').addClass('selected-unwrap');
             firstTopNode.addClass('selected-block');
             if(firstTopNode[0] !== lastTopNode[0]){
@@ -228,6 +278,8 @@
                     $(this).addClass('selected');
                 }
             });
+            
+            return this;
         }
     }
 }(jQuery));
