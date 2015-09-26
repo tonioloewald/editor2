@@ -18,7 +18,7 @@
             this.data('selectable', new Selectable(this));
         }
         return this;
-    }
+    };
     
     function isTextNode(node){
         return node.nodeType === 3;
@@ -36,14 +36,14 @@
                 // for selection by words:
                 var pieces;
                 if(byWord){
-                    pieces = this.textContent.match(/\s+|[^\s]+/g);
+                    pieces = this.textContent.match(/\s+|\w+|[^\w^\s]+/g);
                 } else {
                     pieces = new String(this.textContent);
                 }
                 if(pieces.length > 1){
                     $(this).parent().removeClass('spanified');
                     $.each(pieces, function(){
-                        if(this.trim().length > 1){
+                        if(this.length > 1){
                             container.append(wordSpan.clone().text(this).spanify(true));
                         } else {
                             container.append(charSpan.clone().text(this));
@@ -60,7 +60,7 @@
             });
         }
         return this;
-    }
+    };
     
     function leafNodesBetween(root, nodeA, nodeB, filter){
         root = $(root)[0];
@@ -157,9 +157,9 @@
                         sel.unmark();
                         sel.removeCarets();
                         if((evt.clientX - elt.offset().left) < elt.width() / 2){
-                            caret('caret-start').insertBefore(this);
+                            caret('caret-start').insertBefore(elt);
                         } else {
-                            caret('caret-start').insertAfter(this);
+                            caret('caret-start').insertAfter(elt);
                         }
                     } else {
                         sel.extendSelection();
@@ -191,10 +191,15 @@
                     break;
                 case 2:
                     // word select
-                    first = sel.find('.caret-start').closest('.spanified-word');
-                    last = sel.find('.caret').closest('.spanified-word');
+                    first = sel.find('.caret-start');
+                    if(first.closest('.spanified-word').length){
+                        first = first.closest('.spanified-word');
+                    }
+                    last = sel.find('.caret');
                     if(!last.length){
                         last = first;
+                    } else if( last.closest('.spanified-word').length){
+                        last = last.closest('.spanified-word');
                     }
                     sel.markRange(first, last);
                     break;
@@ -234,11 +239,11 @@
             
             // console.log('placing carets at range boundaries', first, last);
             if(first.isBefore(last)){
-                caret('caret-start').insertBefore(first.firstLeafNode());
-                caret().insertAfter(last.lastLeafNode());
+                caret('caret-start').insertBefore(first.firstLeafNode().parent());
+                caret().insertAfter(last.lastLeafNode().parent());
             } else {
-                caret().insertBefore(last.firstLeafNode());
-                caret('caret-start').insertAfter(first.lastLeafNode());
+                caret().insertBefore(last.firstLeafNode().parent());
+                caret('caret-start').insertAfter(first.lastLeafNode().parent());
             }
             this.mark();
             return this;
