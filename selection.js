@@ -119,8 +119,12 @@
         return nodes;
     }
     
-    function caret(className){
-        return $('<span>').addClass(className || 'caret');
+    function caret(){
+        return $('<span>').addClass('caret');
+    }
+    
+    function caretStart(){
+        return $('<span>').addClass('caret-start');
     }
     
     function Selectable(root){
@@ -153,13 +157,21 @@
                 var elt = $(this);
                 sel.selecting = evt.originalEvent.detail;
                 if(elt.is('.spanified')){
-                    if(sel.selecting === 1){
+                    if(evt.shiftKey){
+                        sel.find('.caret').remove();
+                        if((evt.clientX - elt.offset().left) < elt.width() / 2){
+                            caret().insertBefore(elt);
+                        } else {
+                            caret().insertAfter(elt);
+                        }
+                        sel.mark();
+                    } else if(sel.selecting === 1){
                         sel.unmark();
                         sel.removeCarets();
                         if((evt.clientX - elt.offset().left) < elt.width() / 2){
-                            caret('caret-start').insertBefore(elt);
+                            caretStart().insertBefore(elt);
                         } else {
-                            caret('caret-start').insertAfter(elt);
+                            caretStart().insertAfter(elt);
                         }
                     } else {
                         sel.extendSelection();
@@ -239,11 +251,11 @@
             
             // console.log('placing carets at range boundaries', first, last);
             if(first.isBefore(last)){
-                caret('caret-start').insertBefore(first.firstLeafNode().parent());
+                caretStart().insertBefore(first.firstLeafNode().parent());
                 caret().insertAfter(last.lastLeafNode().parent());
             } else {
                 caret().insertBefore(last.firstLeafNode().parent());
-                caret('caret-start').insertAfter(first.lastLeafNode().parent());
+                caretStart().insertAfter(first.lastLeafNode().parent());
             }
             this.mark();
             return this;
