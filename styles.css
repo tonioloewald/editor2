@@ -87,7 +87,9 @@ body {
 }
 .caret, .caret-start {
     display: inline-block;
-    height: 20px;
+    /* height: 20px; */
+    font-size: inherit;
+    line-height: inherit;
     width: 2px;
     margin-left: -1px;
     margin-right: -1px;
@@ -102,6 +104,11 @@ body {
 .caret {
     animation: blink 1s steps(2, start) infinite;
     -webkit-animation: blink 1s steps(2, start) infinite;
+    border: 0;
+    padding: 0;
+}
+.caret:focus {
+    outline: none;
 }
 @keyframes blink {
     to {
