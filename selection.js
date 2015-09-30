@@ -123,14 +123,6 @@
         return nodes;
     }
 
-    function caret(){
-        return $('<input>').addClass('caret');
-    }
-
-    function caretStart(){
-        return $('<span>').addClass('caret-start');
-    }
-
     function Selectable(root){
         this.root = $(root);
         this.selecting = false;
@@ -149,9 +141,9 @@
                 if(sel.selecting && elt.is('.spanified')){
                     sel.find('.caret').remove();
                     if((evt.clientX - elt.offset().left) < elt.width() / 2){
-                        caret().insertBefore(elt);
+                        $(sel.caret).insertBefore(elt);
                     } else {
-                        caret().insertAfter(elt);
+                        $(sel.caret).insertAfter(elt);
                     }
                     sel.extendSelection();
                 }
@@ -164,18 +156,18 @@
                     if(evt.shiftKey){
                         sel.find('.caret').remove();
                         if((evt.clientX - elt.offset().left) < elt.width() / 2){
-                            caret().insertBefore(elt);
+                            $(sel.caret).insertBefore(elt);
                         } else {
-                            caret().insertAfter(elt);
+                            $(sel.caret).insertAfter(elt);
                         }
                         sel.mark();
                     } else if(sel.selecting === 1){
                         sel.unmark();
                         sel.removeCarets();
                         if((evt.clientX - elt.offset().left) < elt.width() / 2){
-                            caretStart().add(caret()).insertBefore(elt);
+                            $(sel.caretStart).add($(sel.caret)).insertBefore(elt);
                         } else {
-                            caretStart().add(caret()).insertAfter(elt);
+                            $(sel.caretStart).add($(sel.caret)).insertAfter(elt);
                         }
                     } else {
                         sel.extendSelection();
@@ -189,11 +181,19 @@
                     sel.extendSelection();
                     sel.selecting = false;
                 }
-                sel.find('.caret').focus();
+                sel.selectionChanged();
+                // if we're currently editable then focus the caret
+                sel.find('input.caret').focus();
                 evt.preventDefault();
                 evt.stopPropagation();
             });
         },
+        /* Synthetic event triggered by selection change */
+        selectionChanged: function(){
+            this.root.trigger('selectionchanged');
+        },
+        caret: '<span class="caret"></span>',
+        caretStart: '<span class="caret-start"></span>',
         removeCarets: function(){
             // console.log('removing carets');
             this.find('.caret,.caret-start').remove();
@@ -247,6 +247,7 @@
             this.find('.last-block').removeClass('last-block');
         },
         markRange: function(first, last){
+            var sel = this;
             if(first.length === 0 || last.length === 0){
                 console.error('Bad range, missing boundary', first, last);
             }
@@ -256,23 +257,24 @@
             if(last.is('.caret,.caret-start')){
                 last = last.previousLeafNode();
             }
-            this.removeCarets();
+            sel.removeCarets();
 
             // console.log('placing carets at range boundaries', first, last);
             if(first.isBefore(last)){
-                caretStart().insertBefore(first.firstLeafNode().parent());
-                caret().insertAfter(last.lastLeafNode().parent());
+                $(sel.caretStart).insertBefore(first.firstLeafNode().parent());
+                $(sel.caret).insertAfter(last.lastLeafNode().parent());
             } else {
-                caret().insertBefore(last.firstLeafNode().parent());
-                caretStart().insertAfter(first.lastLeafNode().parent());
+                $(sel.caret).insertBefore(last.firstLeafNode().parent());
+                $(sel.caretStart).insertAfter(first.lastLeafNode().parent());
             }
-            this.mark();
-            return this;
+            sel.mark();
+            return sel;
         },
         mark: function(){
-            this.unmark();
-            var start = this.find('.caret-start');
-            var end = this.find('.caret');
+            var sel = this;
+            sel.unmark();
+            var start = sel.find('.caret-start');
+            var end = sel.find('.caret');
             var temp = false;
             if(start.length === 0){
                 return;
@@ -284,9 +286,9 @@
                 end = temp;
             }
 
-            var nodes = leafNodesBetween(this.root, start, end);
-            var firstTopNode = start.parentsUntil(this.root).last().addClass('first-block');
-            var lastTopNode = end.parentsUntil(this.root).last().addClass('last-block');
+            var nodes = leafNodesBetween(sel.root, start, end);
+            var firstTopNode = start.parentsUntil(sel.root).last().addClass('first-block');
+            var lastTopNode = end.parentsUntil(sel.root).last().addClass('last-block');
             var selectedSpan = $('<span>').addClass('selected-unwrap');
             firstTopNode.addClass('selected-block');
             if(firstTopNode[0] !== lastTopNode[0]){
@@ -296,20 +298,21 @@
             }
 
             $.each(nodes, function(){
-                if(this.nodeType === 3){
-                    if(this.parentNode.childNodes.length === 1){
+                var node = this;
+                if(node.nodeType === 3){
+                    if(node.parentNode.childNodes.length === 1){
                         // text node that is an only child
-                        $(this.parentNode).addClass('selected');
+                        $(node.parentNode).addClass('selected');
                     } else {
-                        $(this).wrap(selectedSpan.clone());
+                        $(node).wrap(selectedSpan.clone());
                     }
                 } else {
                     // style-able node (e.g. <img>, <hr>)
-                    $(this).addClass('selected');
+                    $(node).addClass('selected');
                 }
             });
 
-            return this;
+            return sel;
         }
     };
 }(jQuery));

@@ -1,9 +1,9 @@
 /*global jQuery*/
+/*jshint laxbreak: true */
 
 (function($){
-  
 "use strict";
-  
+
 $.fn.makeEditor = function(options){
     this.data('editor', new Editor(this, options));
     // console.log(this, this.data('editor'));
@@ -12,23 +12,24 @@ $.fn.makeEditor = function(options){
 
 function Editor(elt, options){
     this.root = $(elt);
-    if(elt.data().selectable){
+    if(!elt.data().selectable){
         elt.makeSelectable();
     }
     this.selectable = elt.data().selectable;
+    this.selectable.caret = '<input class="caret">';
     this.options = $.extend({}, options);
-    
+
     var defaults = {
     };
-    
+
     for(var key in defaults){
         if(this.options.key === undefined){
             this.options[key] = defaults[key];
         }
     }
-    
+
     this.setup();
-    
+
     return this;
 }
 
@@ -55,20 +56,24 @@ Editor.prototype = {
         editor.root.on('mouseup.editor', editor, editor.mouseup);
         editor.root.on('keydown.editor', editor, editor.keydown);
         editor.root.on('keypress.editor', editor, editor.keypress);
-        
+
         editor.caret = $('<span>').addClass('caret');
         var lastBlock = editor.block(editor.root.contents().last());
-        
+
         if(lastBlock.length){
-            lastBlock.append(editor.caret);
+            lastBlock.append(editor.selection.caret);
         } else {
             editor.root.append($('<p>').append(editor.caret));
         }
-        
+
         if(editor.options.tools){
             editor.tools = $(editor.options.tools).on('click.editor', 'button', editor, editor.doCommand)
                                                   .on('change.editor', 'select', editor, editor.doCommand);
         }
+        editor.root.on('selectionchanged.editor', function(evt){
+            editor.updateUndo("new");
+        });
+        // TODO -- move this out of here
         editor.root.on('click.editor', '.editor-annotation', function(evt){
             var target = $(evt.target);
             if(target.is('button.delete')){
@@ -85,22 +90,19 @@ Editor.prototype = {
         setBlocks: function(newNodeType){
             var editor = this,
                 blocks = editor.find('.selected-block');
-                
+
             blocks.each(function(){
                 var newBlock = $('<' + newNodeType + '>').append($(this).contents())
                                                            .addClass('selected-block');
                 $(this).replaceWith(newBlock);
             });
-            
-            blocks = editor.find('.selected-block');
-            editor.selectable.markRange(blocks.first(), blocks.last());
-            
+
             /*
                 TO DO
                 verify this is not needed
                 // select the entirety of the newly styled blocks
                 ensureNonEmpty(blocks.first().add(blocks.last()));
-            /* 
+            /*
                 TO DO replace this:
                 editor.setSelection([blocks.first().contents()[0], blocks.last().contents().last()[0]]);
             */
@@ -138,8 +140,6 @@ Editor.prototype = {
                     $(editor.selectedLeafNodes()[0]).before(annotation);
                 }
             }
-            editor.root.focus();
-            editor.recordSelection(true);
         }
     },
     /* tool commands */
@@ -148,7 +148,7 @@ Editor.prototype = {
             command = $(this).attr('value') || $(this).val(),
             parameters = command.split(' '),
             fn;
-            
+
         // console.log(command);
         command = parameters.shift();
         fn = editor.commands[command];
@@ -159,11 +159,6 @@ Editor.prototype = {
         }
     },
     /* event handlers */
-    mouseup: function(evt){
-        // console.log('mouseup', evt);
-        var editor = evt.data;
-        editor.recordSelection();
-    },
     contentKey: function(key){
         var editor = this;
         if(typeof key === 'number'){
@@ -274,7 +269,7 @@ Editor.prototype = {
     keypress: function(evt){
         // console.log('keypress', evt);
         var editor = evt.data;
-        
+
         // don't process shortcuts (yet!)
         if(evt.ctrlKey || evt.metaKey){
             editor.shortcut(evt);
@@ -282,7 +277,7 @@ Editor.prototype = {
             if(!editor.insertionPoint()){
                 editor.deleteSelection();
             }
-            
+
             switch(evt.which){
                 case 8:
                 case 13:
@@ -294,7 +289,7 @@ Editor.prototype = {
             }
         }
         editor.updateUndo();
-        
+
         evt.preventDefault();
         evt.stopPropagation();
     },
@@ -304,7 +299,7 @@ Editor.prototype = {
             command = "init";
         }
         switch(command){
-            case "init":                
+            case "init":
                 console.log('initializing undo');
                 editor.undo = [editor.root.html()];
                 editor.undoDepth = 0;
@@ -349,7 +344,7 @@ Editor.prototype = {
     },
     shortcut: function(evt){
         console.log('shortcut', evt);
-        
+
         evt.preventDefault();
         evt.stopPropagation();
     },
@@ -374,13 +369,13 @@ Editor.prototype = {
         if(editor.insertionPoint()){
             return;
         }
-        
+
         var nodes = editor.selectedLeafNodes();
         if(nodes.length === 0){
             return;
         }
         var blocks = editor.selectedBlocks();
-        
+
         editor.caret.insertAfter(nodes[nodes.length - 1]);
         $.each(nodes, function(){ $(this).remove(); });
         if(blocks.length > 1){
@@ -416,19 +411,19 @@ Editor.prototype = {
     },
     updateParagraphStyleMenu: function(){
         var menu = this.tools.find('select[name="paragraph-style"]'),
-           .selected-blockBlockType;
+            currentBlockType;
         if(!menu.length){
             return;
         }
-        this.selectedBlocks().addClass(.selected-block').each(function(){
-            if.selected-blockBlockType === undefined){
-               .selected-blockBlockType = this.nodeName;
-            } else if .selected-blockBlockType !== this.nodeName){
-               .selected-blockBlockType = false;
+        this.selectedBlocks().each(function(){
+            if(currentBlockType === undefined){
+                currentBlockType = this.nodeName;
+            } else if (currentBlockType !== this.nodeName){
+                currentBlockType = false;
             }
         });
-        if.selected-blockBlockType){
-            menu.val('setBlocks ' +.selected-blockBlockType.toLowerCase());
+        if(currentBlockType){
+            menu.val('setBlocks ' + currentBlockType.toLowerCase());
         }
     }
 };

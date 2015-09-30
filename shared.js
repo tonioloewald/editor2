@@ -1,15 +1,19 @@
 /*
     # Shared Utilities
+
+    Simple jQuery plugins used in other modules.
 */
+/*jshint laxbreak: true */
 
 (function($){
+"use strict";
 
 $.fn.loadFragment = function(url){
     var elt = this;
     $.ajax(url).success(function(html){
         var content = $('<div>').append(html).contents().appendTo(elt);
     });
-}
+};
 
 $.fn.isBefore = function(otherElt){
     /*
@@ -24,16 +28,16 @@ $.fn.isBefore = function(otherElt){
         32 -- ¯\_(ツ)_/¯
     */
     var answer = false;
-    if(this.length && $(otherElt).length){  
-        answer = this[0].compareDocumentPosition($(otherElt)[0]) & 4
+    if(this.length && $(otherElt).length){
+        answer = this[0].compareDocumentPosition($(otherElt)[0]) & 4;
     } else {
         console.warn('isBefore passed bad inputs:', this, otherElt);
     }
     return answer;
-}
+};
 
 $.fn.siblingOrder = function(){
-    var node = this[0];    
+    var node = this[0];
     var parent = node.parentNode;
     var position = -1;
     if(parent){
@@ -45,7 +49,7 @@ $.fn.siblingOrder = function(){
         });
     }
     return position;
-}
+};
 
 $.fn.firstLeafNode = function(){
     var node = this[0];
@@ -53,7 +57,7 @@ $.fn.firstLeafNode = function(){
         node = node.firstChild;
     }
     return $(node);
-}
+};
 
 $.fn.lastLeafNode = function(){
     var node = this[0];
@@ -61,7 +65,7 @@ $.fn.lastLeafNode = function(){
         node = node.lastChild;
     }
     return $(node);
-}
+};
 
 $.fn.nextLeafNode = function(base, filter){
     var node = this[0];
@@ -72,7 +76,7 @@ $.fn.nextLeafNode = function(base, filter){
     } else {
         return null;
     }
-}
+};
 
 $.fn.previousLeafNode = function(base, filter){
     var node = this[0];
@@ -83,7 +87,7 @@ $.fn.previousLeafNode = function(base, filter){
     } else {
         return null;
     }
-}
+};
 
 $.fn.allowSelection = function(allow){
     if(allow){
@@ -106,12 +110,13 @@ $.fn.allowSelection = function(allow){
         });
     }
     return this;
-}
+};
 /*
     DOM traversal utilities
 */
 function leafNodes(node, filter){
-    var nodeList = [];
+    var nodeList = [],
+        i;
     if(node.length && node.nodeType === undefined){
         // jQuery bag of nodes
         $.each(node, function(){
@@ -122,14 +127,13 @@ function leafNodes(node, filter){
         nodeList.push(node);
     } else {
         // element
-        for(var i = 0; i < node.childNodes.length; i++){
+        for(i = 0; i < node.childNodes.length; i++){
             nodeList = nodeList.concat(leafNodes(node.childNodes[i]));
         }
     }
     if(filter){
-        var nodes = nodeList,
-            i,
-            nodeList = [];
+        var nodes = nodeList;
+        nodeList = [];
         if(typeof filter === 'string'){
             for(i = 0; i < nodes.length; i++){
                 if($(nodes[i]).is(filter)){
@@ -151,5 +155,5 @@ function leafNodes(node, filter){
 
 $.fn.leafNodes = function(filter){
     return leafNodes(this, filter);
-}
+};
 }(jQuery));
