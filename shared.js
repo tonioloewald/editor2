@@ -70,15 +70,15 @@ $.fn.lastLeafNode = function(){
 
 $.fn.nextLeafNode = function(base, filter){
     var node = this[0],
-        next;
-    if(node.nextSibling){
+        next = null;
+    if(node && node.nextSibling){
         next = $(node.nextSibling).firstLeafNode();
-    } else if (node.parentNode !== (base || document.body)){
+    } else if (node && node.parentNode !== (base || document.body)){
         next = $(node.parentNode).nextLeafNode();
-    } else {
-        return null;
     }
-    if(!filter){
+    if(next === null){
+        return next;
+    } else if(!filter){
         return next;
     } else if (typeof filter === 'string' && $(next).is(filter)){
         return next;
@@ -91,15 +91,15 @@ $.fn.nextLeafNode = function(base, filter){
 
 $.fn.previousLeafNode = function(base, filter){
     var node = this[0],
-        previous;
-    if(node.previousSibling){
+        previous = null;
+    if(node && node.previousSibling){
         previous = $(node.previousSibling).lastLeafNode();
-    } else if (node.parentNode !== (base || document.body)){
+    } else if (node && node.parentNode !== (base || document.body)){
         previous = $(node.parentNode).previousLeafNode();
-    } else {
-        return null;
     }
-    if(!filter){
+    if(node === null){
+        return node;
+    } else if (!filter){
         return previous;
     } else if (typeof filter === 'string' && $(previous).is(filter)){
         return previous;

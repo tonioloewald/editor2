@@ -103,7 +103,7 @@
         .caret-start {
             background-color: blue;
         }
-        
+
         .caret {
             animation: blink 1s steps(2, start) infinite;
             -webkit-animation: blink 1s steps(2, start) infinite;
@@ -138,39 +138,41 @@
     </style>
 </head>
 <body>
-    <h1>Editor2</h1>
+    <h1>Tests</h1>
     <p>
         This is an experimental editor that uses pure HTML does not use execCommand
         or HTML5 contenteditable at all.
     </p>
-    <p>
-        Test 
-        <b>Hierachy</b>
-        <i>for</i>
-        Node
-        <hr>
-        How well
-        <blockquote>
-            does
-            <b>it</b>
-        </blockquote>
-        <blockquote>
-            <b>work</b>
-            ?
-        </blockquote>
-    </p>
+    <div class="traversal-test">
+        <p>
+            Test
+            <b>Hierachy</b>
+            <i>for</i>
+            Node
+            <hr>
+            How well
+            <blockquote>
+                does
+                <b>it</b>
+            </blockquote>
+            <blockquote>
+                <b>work</b>
+                ?
+            </blockquote>
+        </p>
+    </div>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
     <script src="shared.js"></script>
-    <script src="editor2.js"></script>
     <script src="editorX.js"></script>
     <script src="selection.js"></script>
     <ul>
     </ul>
     <script> /* TESTS */
         console.clear();
-        var node = $('h1');
-        while( node = node.nextLeafNode() ){
-            $('<ul>').append('<li>' + node[0].textContent + '</li>');
+        var dom = $('.traversal-test').clone().detach(),
+            node = dom.firstLeafNode();
+        while( node = node.nextLeafNode(dom, function(node){ return !!node.text().trim(); }) ){
+            $('ul').append('<li>"' + node[0].data + '"</li>');
         }
     </script>
 </body>
