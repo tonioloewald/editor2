@@ -84,25 +84,17 @@ Editor.prototype = {
         editor.undoDepth = 0;
     },
     commands: {
+        // TODO implement list and table support
+        // TODO implement concept of an editor sub-base (e.g. td, th, li, or specified)
         setBlocks: function(newNodeType){
             var editor = this,
                 blocks = editor.find('.selected-block');
 
             blocks.each(function(){
                 var newBlock = $('<' + newNodeType + '>').append($(this).contents())
-                                                           .addClass('selected-block');
+                                                         .addClass('selected-block');
                 $(this).replaceWith(newBlock);
             });
-
-            /*
-                TO DO
-                verify this is not needed
-                // select the entirety of the newly styled blocks
-                ensureNonEmpty(blocks.first().add(blocks.last()));
-            /*
-                TO DO replace this:
-                editor.setSelection([blocks.first().contents()[0], blocks.last().contents().last()[0]]);
-            */
         },
         setText: function(attribute, setting){
             var editor = this,
