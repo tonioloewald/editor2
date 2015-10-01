@@ -104,6 +104,23 @@ Editor.prototype = {
                 editor.setSelection([blocks.first().contents()[0], blocks.last().contents().last()[0]]);
             */
         },
+        setText: function(attribute, setting){
+            var editor = this,
+                nodes,
+                styledSpan = $('<span>').css(attribute, setting);
+
+            editor.selectable.unmark().root.spanify(false);
+            editor.selectable.normalize().mark();
+            nodes = editor.selectedLeafNodes();
+            $.each(nodes, function(){
+                if(this.nodeType === 3 && this.parentNode.childNodes.length === 1){
+                    $(this.parentNode).css(attribute, setting);
+                } else if(this.nodeType === 3) {
+                    $(this).wrap(styledSpan);
+                }
+            });
+            editor.updateUndo("new");
+        },
         updateUndo: function(command){
             this.updateUndo(command);
         },
@@ -155,9 +172,10 @@ Editor.prototype = {
     backspace: function(){
         var editor = this;
         if(!editor.deleteSelection()){
-            var node = editor.find('.caret-start').previousLeafNode(editor.root, deletableFilter),
-                caretBlock = editor.block(editor.find('.caret-start')),
-                deletionBlock;
+            var insertionPoint = editor.insertionPoint(),
+                node = insertionPoint.previousLeafNode(editor.root, deletableFilter),
+                caretBlock = editor.block(insertionPoint),
+                deletionBlock = editor.block(node);
             if(node.length){
                 deletionBlock = editor.block(node);
                 node = node[0];
@@ -353,16 +371,7 @@ Editor.prototype = {
         return this.root.find(selector);
     },
     normalize: function(){
-        var rootNode = this.root[0],
-            i,
-            child;
-        for(i = rootNode.childNodes.length - 1; i >= 0; i--){
-            child = rootNode.childNodes[i];
-            if(child.nodeType === 3 && child.data.match(/^\s*$/)){
-                $(child).remove();
-            }
-        }
-        rootNode.normalize();
+        this.selectable.normalize();
     },
     // using selection information in the DOM
     // finds all leaf nodes in the selection (these will be elements with
@@ -387,11 +396,11 @@ Editor.prototype = {
                                       .focus();
 
             $.each(nodes, function(){
-                var parent = $(this).parent();
-                $(this).remove();
-                if(parent[0].childNodes.length === 0){
-                    parent.remove();
+                var node = this;
+                while(node.parentNode.childNodes.length === 1){
+                    node = node.parentNode;
                 }
+                $(node).remove();
             });
             wasAnythingDeleted = true;
         }
@@ -427,7 +436,11 @@ Editor.prototype = {
     },
     // if the caret is within the root then it is the insertion point
     insertionPoint: function(){
-        return !!this.root.find('.caret').length;
+        if( this.root.find('.caret').length ){
+            return this.find('.caret-start,.caret').first();
+        } else {
+            return false;
+        }
     },
     updateParagraphStyleMenu: function(){
         var menu = this.tools.find('select[name="paragraph-style"]'),

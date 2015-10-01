@@ -2,7 +2,7 @@
     # DIY selection
 
     Disables browser selection behavior
-    Selections are marked with *selected* and *selected-unwrap* classes
+    Selections are marked with *selected* class
     Selection boundaries are marked with span.caret-start and span.caret
 
     ## TO DO
@@ -44,7 +44,7 @@
                 } else {
                     pieces = this.textContent.split(''); // new String(this.textContent);
                 }
-                if(pieces.length > 1){
+                if(pieces.length > 1 || pieces[0].length > 1){
                     $(this).parent().removeClass('spanified');
                     $.each(pieces, function(){
                         if(this.length > 1){
@@ -204,7 +204,6 @@
             switch(sel.selecting){
                 case 1:
                     sel.mark();
-                    sel.root.children().not('.selected-block').spanify(false);
                     break;
                 case 2:
                     // word select
@@ -240,11 +239,16 @@
             return this.root.find(selector);
         },
         unmark: function(){
-            this.find('.selected-unwrap').contents().unwrap();
+            this.find('span.unwrap').each(function(){
+                if(this.classList.length === 1 && this.attributes.length === 1){
+                    $(this).contents().unwrap();
+                }
+            });
             this.find('.selected').removeClass('selected');
             this.find('.selected-block').removeClass('selected-block');
             this.find('.first-block').removeClass('first-block');
             this.find('.last-block').removeClass('last-block');
+            return this;
         },
         markRange: function(first, last){
             var sel = this;
@@ -289,7 +293,7 @@
             var nodes = leafNodesBetween(sel.root, start, end);
             var firstTopNode = start.parentsUntil(sel.root).last().addClass('first-block');
             var lastTopNode = end.parentsUntil(sel.root).last().addClass('last-block');
-            var selectedSpan = $('<span>').addClass('selected-unwrap');
+            var selectedSpan = $('<span>').addClass('selected unwrap');
             firstTopNode.addClass('selected-block');
             if(firstTopNode[0] !== lastTopNode[0]){
                 firstTopNode.add(firstTopNode.nextUntil(lastTopNode))
@@ -297,6 +301,7 @@
                             .addClass('selected-block');
             }
 
+            sel.root.children().not('.selected-block').spanify(false);
             $.each(nodes, function(){
                 var node = this;
                 if(node.nodeType === 3){
@@ -313,6 +318,24 @@
             });
 
             return sel;
+        },
+        normalize: function(){
+            var rootNode = this.root[0],
+                i,
+                child;
+            /*
+                TODO consider lofting non-whitespace text nodes into blocks,
+                but they shouldn't be there anyway
+            */
+            // remove root-level whitespace text nodes as they are very confusing
+            for(i = rootNode.childNodes.length - 1; i >= 0; i--){
+                child = rootNode.childNodes[i];
+                if(child.nodeType === 3 && child.data.match(/^\s*$/)){
+                    $(child).remove();
+                }
+            }
+            rootNode.normalize();
+            return this;
         }
     };
 }(jQuery));
