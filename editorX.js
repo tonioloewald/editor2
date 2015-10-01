@@ -157,9 +157,8 @@ Editor.prototype = {
             key = String.fromCharCode(key);
         }
         // TODO track change add
-        editor.find('.caret-start').before(document.createTextNode(key));
-        editor.normalize();
-        editor.updateUndo();
+        editor.insertionPoint().before(document.createTextNode(key));
+        editor.normalize().updateUndo();
     },
     backspace: function(){
         var editor = this;
@@ -364,6 +363,7 @@ Editor.prototype = {
     },
     normalize: function(){
         this.selectable.normalize();
+        return this;
     },
     // using selection information in the DOM
     // finds all leaf nodes in the selection (these will be elements with
