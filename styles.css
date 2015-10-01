@@ -32,22 +32,6 @@ html {
 .editor-italic {
     font-style: italic;
 }
-.editor-annotation:after {
-    position: relative;
-    top: -4px;
-    content: "\2020";
-}
-.editor-annotation > span {
-    display: block;
-    padding: 4px 8px;
-    font-weight: normal;
-    font-style: normal;
-    font-size: 12px "Helvetica Neue", Helvetica, Arial, Sans-serif;
-    background-color: #ffc;
-    position: absolute;
-    right: -212px;
-    max-width: 200px;
-}
 .noselect {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
@@ -120,6 +104,9 @@ body {
         background-color: transparent;
     }
 }
+.tools label {
+    font-size: 10px;
+}
 .tools button {
     background-color: #ccc;
 }
@@ -137,4 +124,27 @@ body {
 
 .selected, .selected-unwrap {
     background-color: rgba(0,0,255,0.3);
+}
+
+/* Annotations */
+
+.annotation-template {
+    display: none;
+}
+
+.annotation:after {
+    position: relative;
+    top: -4px;
+    content: "\2020";
+}
+.annotation > span {
+    display: block;
+    padding: 4px 8px;
+    font-weight: normal;
+    font-style: normal;
+    font-size: 12px "Helvetica Neue", Helvetica, Arial, Sans-serif;
+    background-color: #ffc;
+    position: absolute;
+    right: -212px;
+    max-width: 200px;
 }

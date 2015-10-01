@@ -25,7 +25,11 @@
     };
 
     function isTextNode(node){
-        return node.nodeType === 3;
+        return node.nodeType === 3 && $(node).closest('.do-not-spanify').length === 0;
+    }
+
+    function isSelectable(node){
+        return $(node).closest('.not-selectable').length === 0;
     }
 
     $.fn.spanify = function(makeSpans, byWord){
@@ -136,6 +140,9 @@
             var sel = this;
             sel.root.allowSelection(false);
             sel.root.on('mousemove.selectable', '*', function(evt){
+                if($(evt.target).is('.not-selectable') || $(evt.target).closest('.not-selectable').length > 0){
+                    return;
+                }
                 var elt = $(this);
                 elt.spanify(true, true);
                 if(sel.selecting && elt.is('.spanified')){
@@ -150,6 +157,9 @@
                 evt.preventDefault();
                 evt.stopPropagation();
             }).on('mousedown.selectable', '*', function(evt){
+                if($(evt.target).is('.not-selectable') || $(evt.target).closest('.not-selectable').length > 0){
+                    return;
+                }
                 var elt = $(this);
                 sel.selecting = evt.originalEvent.detail;
                 if(elt.is('.spanified')){
@@ -176,6 +186,9 @@
                 evt.preventDefault();
                 evt.stopPropagation();
             }).on('mouseup.selectable', function(evt){
+                if($(evt.target).is('.not-selectable') || $(evt.target).closest('.not-selectable').length > 0){
+                    return;
+                }
                 // console.log(sel.selecting);
                 if(sel.selecting){
                     sel.extendSelection();
@@ -290,7 +303,7 @@
                 end = temp;
             }
 
-            var nodes = leafNodesBetween(sel.root, start, end);
+            var nodes = leafNodesBetween(sel.root, start, end, isSelectable);
             var firstTopNode = start.parentsUntil(sel.root).last().addClass('first-block');
             var lastTopNode = end.parentsUntil(sel.root).last().addClass('last-block');
             var selectedSpan = $('<span>').addClass('selected unwrap');

@@ -60,6 +60,39 @@ Editor.prototype = {
         // editor.root.on('mouseup.editor', editor, editor.mouseup);
         editor.root.on('keydown.editor', 'input.caret', editor, editor.keydown);
         editor.root.on('keypress.editor', 'input.caret', editor, editor.keypress);
+        editor.root.on('click.annotation', '.annotation .delete', function(evt){
+            var annotation = $(evt.target).closest('.annotation');
+            annotation.find('.annotation-body').remove();
+            if(annotation.contents().length){
+                annotation.contents().unwrap();
+            } else {
+                annotation.remove();
+            }
+        });
+        // persist changes to the DOM
+        editor.root.on('change.annotation', 'textarea,input,select', function(evt){
+            var elt = $(evt.target),
+                value = elt.val();
+            switch(elt[0].nodeName){
+                case "TEXTAREA":
+                    elt.text(value);
+                    break;
+                case "INPUT":
+                    // TODO radio buttons and checkboxes
+                    elt.attr('value', value);
+                    break;
+                case "SELECT":
+                    elt.find('option').each(function(){
+                        var option = $(this);
+                        if(option.val() === value){
+                            this.setAttribute('selected','');
+                        } else {
+                            option.removeAttr('selected');
+                        }
+                    });
+                    break;
+            }
+        });
         editor.root.append($('<p>').append(editor.selectable.caret));
         editor.normalize();
 
@@ -70,23 +103,14 @@ Editor.prototype = {
         editor.root.on('selectionchanged.editor', function(evt){
             editor.updateUndo('new', 'selectionchanged');
         });
-        // TODO -- move this out of here
-        editor.root.on('click.editor', '.editor-annotation', function(evt){
-            var target = $(evt.target);
-            if(target.is('button.delete')){
-            } else {
-                var text = $(this).closest('.editor-annotation');
-            }
-            $(evt.target).closest('.editor-annotation').remove();
-            editor.updateUndo("new");
-        });
         editor.updateUndo("init");
         editor.undoDepth = 0;
+        editor.find('.caret').focus();
     },
     commands: {
         // TODO implement list and table support
         // TODO implement concept of an editor sub-base (e.g. td, th, li, or specified)
-        setBlocks: function(newNodeType){
+        setBlockType: function(newNodeType){
             var editor = this,
                 blocks = editor.find('.selected-block');
 
@@ -95,6 +119,9 @@ Editor.prototype = {
                                                          .addClass('selected-block');
                 $(this).replaceWith(newBlock);
             });
+        },
+        setBlocks: function(attribute, setting){
+            this.selectedBlocks().css(attribute, setting);
         },
         setText: function(attribute, setting){
             var editor = this,
@@ -118,20 +145,13 @@ Editor.prototype = {
         },
         annotate: function(type){
             var editor = this,
-                text = prompt(type || "Annotation");
-            if(text){
-                var content = $('<span>').append('<span>' + text + '</span>')
-                                         .append('<button class="delete">&times;</button>'),
-                    annotation = $('<span>').addClass('editor-annotation')
-                                            .addClass('noselect')
-                                            .addClass(type)
-                                            .append(content);
-                if(editor.caret.closest('body')){
-                    editor.caret.before(annotation);
-                } else {
-                    $(editor.selectedLeafNodes()[0]).before(annotation);
-                }
+                annotationSpan = $('<span>').addClass('annotation do-not-spanify not-selectable not-editable');
+            if(editor.insertionPoint()){
+                // TODO wrap annotation span around non-empty selection
+                annotationSpan.append($('.annotation-template .' + type).clone().addClass('annotation-body'))
+                              .insertAfter(editor.find('.caret-start,.caret').last());
             }
+            editor.updateUndo("new");
         }
     },
     /* tool commands */
@@ -262,6 +282,9 @@ Editor.prototype = {
         return false;
     },
     keydown: function(evt){
+        if($(evt.target).is('.not-editable')){
+            return;
+        }
         var editor = evt.data;
         switch(evt.keyCode){
             case 8:
@@ -276,6 +299,9 @@ Editor.prototype = {
         }
     },
     keypress: function(evt){
+        if($(evt.target).is('.not-editable')){
+            return;
+        }
         // console.log('keypress', evt);
         var editor = evt.data;
 
