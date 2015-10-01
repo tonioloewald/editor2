@@ -8,8 +8,8 @@
 <body>
     <h1>Editor2</h1>
     <p>
-        This is an experimental editor that eliminates contenteditable and execCommand. 
-        It still relies on the built-in selection behavior of the browser and the 
+        This is an experimental editor that eliminates contenteditable and execCommand.
+        It still relies on the built-in selection behavior of the browser and the
         selection APIs to determine the state of the browser.
     </p>
     <div class="tools"></div>
@@ -20,12 +20,10 @@
     <script src="selection.js"></script>
     <script>
         $('.tools').loadFragment('tools.html');
-        $('.editor').loadFragment('constitution.html');
-    </script>
-    <script>
-        console.clear();
-        // $('.editor').makeSelectable();
-        $('.editor').makeEditor({tools: '.tools'});
+        $('.editor').loadFragment('constitution.html').then(function(){
+            console.clear();
+            $('.editor').makeEditor({tools: '.tools'});
+        })
     </script>
 </body>
 </html>

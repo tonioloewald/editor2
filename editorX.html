@@ -19,12 +19,10 @@
     <script src="selection.js"></script>
     <script>
         $('.tools').loadFragment('tools.html');
-    </script>
-    <script>
-        console.clear();
-        $('.editor').loadFragment('constitution.html').then(function(){
-            $('.editor').makeEditor({tools: '.tools'});
-        })
+            $('.editor').loadFragment('constitution.html').then(function(){
+                console.clear();
+                $('.editor').makeEditor({tools: '.tools'});
+            })
     </script>
 </body>
 </html>

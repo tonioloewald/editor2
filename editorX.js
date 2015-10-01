@@ -148,7 +148,7 @@ Editor.prototype = {
             key = String.fromCharCode(key);
         }
         // TODO track change add
-        editor.find('.caret').before(document.createTextNode(key));
+        editor.find('.caret-start').before(document.createTextNode(key));
         editor.normalize();
         editor.updateUndo();
     },
