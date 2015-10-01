@@ -10,6 +10,10 @@ $.fn.makeEditor = function(options){
     return this;
 };
 
+function deletableFilter(node){
+    return node.nodeType !== 3 || node.textContent !== '';
+}
+
 function Editor(elt, options){
     this.root = $(elt);
     if(!elt.data().selectable){
@@ -53,25 +57,18 @@ Editor.prototype = {
     setup: function(){
         var editor = this;
         editor.root.attr('tabindex', 0);
-        editor.root.on('mouseup.editor', editor, editor.mouseup);
-        editor.root.on('keydown.editor', editor, editor.keydown);
-        editor.root.on('keypress.editor', editor, editor.keypress);
-
-        editor.caret = $('<span>').addClass('caret');
-        var lastBlock = editor.block(editor.root.contents().last());
-
-        if(lastBlock.length){
-            lastBlock.append(editor.selection.caret);
-        } else {
-            editor.root.append($('<p>').append(editor.caret));
-        }
+        // editor.root.on('mouseup.editor', editor, editor.mouseup);
+        editor.root.on('keydown.editor', 'input.caret', editor, editor.keydown);
+        editor.root.on('keypress.editor', 'input.caret', editor, editor.keypress);
+        editor.root.append($('<p>').append(editor.selectable.caret));
+        editor.normalize();
 
         if(editor.options.tools){
             editor.tools = $(editor.options.tools).on('click.editor', 'button', editor, editor.doCommand)
                                                   .on('change.editor', 'select', editor, editor.doCommand);
         }
         editor.root.on('selectionchanged.editor', function(evt){
-            editor.updateUndo("new");
+            editor.updateUndo('new', 'selectionchanged');
         });
         // TODO -- move this out of here
         editor.root.on('click.editor', '.editor-annotation', function(evt){
@@ -106,20 +103,6 @@ Editor.prototype = {
                 TO DO replace this:
                 editor.setSelection([blocks.first().contents()[0], blocks.last().contents().last()[0]]);
             */
-        },
-        setText: function(className){
-            var editor = this,
-                nodes = editor.selectedLeafNodes();
-            $.each(nodes, function(){
-                // console.log(this);
-                if(this.nodeType === 3 && this.parentNode.childNodes.length === 1){
-                    $(this.parentNode).addClass(className)
-                                      .addClass('editor-selected');
-                } else if(this.nodeType === 3) {
-                    $(this).wrap($('<span>').addClass(className)
-                                            .addClass('editor-selected'));
-                }
-            });
         },
         updateUndo: function(command){
             this.updateUndo(command);
@@ -164,24 +147,40 @@ Editor.prototype = {
         if(typeof key === 'number'){
             key = String.fromCharCode(key);
         }
-        editor.caret.before(document.createTextNode(key));
+        // TODO track change add
+        editor.find('.caret').before(document.createTextNode(key));
         editor.normalize();
+        editor.updateUndo();
     },
     backspace: function(){
         var editor = this;
-        if(editor.insertionPoint()){
-            var block = editor.block(editor.caret),
-                textNode = previousTextNode(editor.caret[0], block[0], true);
-            if(textNode){
-                var text = textNode.textContent;
-                text = text.substr(0, text.length - 1);
-                textNode.nodeValue = text;
-            } else {
-                editor.mergeBackAtCaret();
+        if(!editor.deleteSelection()){
+            var node = editor.find('.caret-start').previousLeafNode(editor.root, deletableFilter),
+                caretBlock = editor.block(editor.find('.caret-start')),
+                deletionBlock;
+            if(node.length){
+                deletionBlock = editor.block(node);
+                node = node[0];
+                // TODO track deletion
+                // TODO merge paragraphs
+                if(node.nodeType === 3 && node.length > 1){
+                    node.data = node.data.substr(0, node.length - 1);
+                } else {
+                    while(node.parentNode.childNodes.length === 1){
+                        node = node.parentNode;
+                    }
+                    $(node).remove();
+                    editor.normalize();
+                }
+                if(
+                    $.contains(editor.root[0], deletionBlock[0])
+                    && deletionBlock[0] !== caretBlock[0]
+                ){
+                    caretBlock.detach().contents().appendTo(deletionBlock);
+                    editor.find('.caret').focus();
+                }
+                editor.updateUndo();
             }
-            editor.updateUndo();
-        } else {
-            editor.deleteSelection();
         }
     },
     // TODO
@@ -274,9 +273,7 @@ Editor.prototype = {
         if(evt.ctrlKey || evt.metaKey){
             editor.shortcut(evt);
         } else {
-            if(!editor.insertionPoint()){
-                editor.deleteSelection();
-            }
+            editor.deleteSelection();
 
             switch(evt.which){
                 case 8:
@@ -288,16 +285,18 @@ Editor.prototype = {
                     break;
             }
         }
-        editor.updateUndo();
-
         evt.preventDefault();
         evt.stopPropagation();
     },
-    updateUndo: function(command){
+    updateUndo: function(command, reason){
         var editor = this;
         if(editor.undo === undefined){
             command = "init";
         }
+        if(reason && editor.reasonForLastUndo === reason){
+            command = undefined;
+        }
+        editor.reasonForLastUndo = reason;
         switch(command){
             case "init":
                 console.log('initializing undo');
@@ -316,13 +315,15 @@ Editor.prototype = {
                 if(editor.undoDepth < editor.undo.length - 1){
                     editor.undoDepth += 1;
                     editor.root.html(editor.undo[this.undoDepth]);
+                    editor.find('.caret').focus();
                     console.log('undo', editor.undoDepth);
                 }
                 break;
-          case "redo":
+            case "redo":
                 if(editor.undoDepth > 0){
                     editor.undoDepth -= 1;
                     editor.root.html(editor.undo[this.undoDepth]);
+                    editor.find('.caret').focus();
                     console.log('redo', editor.undoDepth);
                 }
                 break;
@@ -352,41 +353,60 @@ Editor.prototype = {
         return this.root.find(selector);
     },
     normalize: function(){
-        this.root[0].normalize();
+        var rootNode = this.root[0],
+            i,
+            child;
+        for(i = rootNode.childNodes.length - 1; i >= 0; i--){
+            child = rootNode.childNodes[i];
+            if(child.nodeType === 3 && child.data.match(/^\s*$/)){
+                $(child).remove();
+            }
+        }
+        rootNode.normalize();
     },
     // using selection information in the DOM
     // finds all leaf nodes in the selection (these will be elements with
     // no content (e.g. <hr> and <input...> nodes and text nodes)
     selectedLeafNodes: function(){
-        var editor = this;
-        var nodes = [];
-        // TODO
+        return this.find('.selected').leafNodes();
     },
     // scrupulously deletes all selected leaf nodes (and parent nodes left empty)
     // and merges the first and last blocks if the selection spanned multiple blocks
     deleteSelection: function(){
-        var editor = this;
-        if(editor.insertionPoint()){
-            return;
-        }
+        var editor = this,
+            blocks = editor.selectedBlocks(),
+            wasAnythingDeleted = false;
 
+        // remove completely selected blocks
+        blocks.not('.first-block,.last-block').remove();
         var nodes = editor.selectedLeafNodes();
-        if(nodes.length === 0){
-            return;
-        }
-        var blocks = editor.selectedBlocks();
 
-        editor.caret.insertAfter(nodes[nodes.length - 1]);
-        $.each(nodes, function(){ $(this).remove(); });
-        if(blocks.length > 1){
-            for(var i = 1; i < blocks.length - 1; i++){
-                $(blocks[i]).remove();
-            }
-            // blocks.last().prepend(editor.caret);
-            editor.mergeBackAtCaret();
+        if(nodes.length){
+            editor.selectable.removeCarets();
+            $(editor.selectable.caret).insertAfter(nodes[nodes.length - 1].parentNode)
+                                      .focus();
+
+            $.each(nodes, function(){
+                var parent = $(this).parent();
+                $(this).remove();
+                if(parent[0].childNodes.length === 0){
+                    parent.remove();
+                }
+            });
+            wasAnythingDeleted = true;
         }
-        editor.forgetSelection(true);
-        editor.updateUndo("new");
+
+        // merge paragraphs
+        if(blocks.length > 1){
+            blocks.first().detach().contents().prependTo(blocks.last());
+            wasAnythingDeleted = true;
+        }
+
+        if(blocks.length > 1 || nodes.length){
+            editor.updateUndo("new");
+        }
+
+        return wasAnythingDeleted;
     },
     // gets the top level block containing the node
     block: function(node){
@@ -403,11 +423,11 @@ Editor.prototype = {
     },
     // returns the top level blocks containing the selection range
     selectedBlocks: function(){
-        /* TODO */
+        return this.find('.selected-block');
     },
     // if the caret is within the root then it is the insertion point
     insertionPoint: function(){
-        return !!editor.root.find('.caret').length;
+        return !!this.root.find('.caret').length;
     },
     updateParagraphStyleMenu: function(){
         var menu = this.tools.find('select[name="paragraph-style"]'),

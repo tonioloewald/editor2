@@ -10,7 +10,7 @@
 
 $.fn.loadFragment = function(url){
     var elt = this;
-    $.ajax(url).success(function(html){
+    return $.ajax(url).success(function(html){
         var content = $('<div>').append(html).contents().appendTo(elt);
     });
 };
@@ -36,6 +36,7 @@ $.fn.isBefore = function(otherElt){
     return answer;
 };
 
+// returns the sibling order of a node (0 == first)
 $.fn.siblingOrder = function(){
     var node = this[0];
     var parent = node.parentNode;
@@ -68,24 +69,44 @@ $.fn.lastLeafNode = function(){
 };
 
 $.fn.nextLeafNode = function(base, filter){
-    var node = this[0];
+    var node = this[0],
+        next;
     if(node.nextSibling){
-        return $(node.nextSibling).firstLeafNode();
+        next = $(node.nextSibling).firstLeafNode();
     } else if (node.parentNode !== (base || document.body)){
-        return $(node.parentNode).nextLeafNode();
+        next = $(node.parentNode).nextLeafNode();
     } else {
         return null;
+    }
+    if(!filter){
+        return next;
+    } else if (typeof filter === 'string' && $(next).is(filter)){
+        return next;
+    } else if (typeof filter === 'function' && filter(next)){
+        return next;
+    } else {
+        return $(next).nextLeafNode(base, filter);
     }
 };
 
 $.fn.previousLeafNode = function(base, filter){
-    var node = this[0];
+    var node = this[0],
+        previous;
     if(node.previousSibling){
-        return $(node.previousSibling).lastLeafNode();
+        previous = $(node.previousSibling).lastLeafNode();
     } else if (node.parentNode !== (base || document.body)){
-        return $(node.parentNode).previousLeafNode();
+        previous = $(node.parentNode).previousLeafNode();
     } else {
         return null;
+    }
+    if(!filter){
+        return previous;
+    } else if (typeof filter === 'string' && $(previous).is(filter)){
+        return previous;
+    } else if (typeof filter === 'function' && filter(previous)){
+        return previous;
+    } else {
+        return $(previous).previousLeafNode(base, filter);
     }
 };
 
@@ -117,7 +138,7 @@ $.fn.allowSelection = function(allow){
 function leafNodes(node, filter){
     var nodeList = [],
         i;
-    if(node.length && node.nodeType === undefined){
+    if(node.length !== undefined && node.nodeType === undefined){
         // jQuery bag of nodes
         $.each(node, function(){
             nodeList = nodeList.concat(leafNodes(this));
