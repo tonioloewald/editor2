@@ -210,7 +210,7 @@ Editor.prototype = {
     splitAtCaret: function(){
         var editor = this;
         if(editor.insertionPoint()){
-            var block = editor.block(editor.caret),
+            var block = editor.block(editor.find('.caret')),
                 beforeBlock = block.clone(),
                 nodes = block.leafNodes(),
                 beforeNodes = beforeBlock.leafNodes(),
@@ -220,13 +220,18 @@ Editor.prototype = {
             }
             $.each(nodes, function(idx){
                 var node = inBeforeBlock ? beforeNodes[idx] : nodes[idx];
-                if(this === editor.caret[0]){
+                if($(this).is('.caret-start,.caret')){
                     node = beforeNodes[idx];
                     inBeforeBlock = true;
                 }
+                while(node.parentNode.childNodes.length === 1){
+                    node = node.parentNode;
+                }
                 $(node).remove();
             });
+            // beforeBlock.find('.caret-start,.caret').remove();
             beforeBlock.insertBefore(block);
+            editor.selectable.mark();
             return true;
         }
     },
@@ -265,12 +270,8 @@ Editor.prototype = {
                 break;
             case 13:
                 evt.preventDefault();
-                if(editor.insertionPoint()){
-                    editor.splitAtCaret();
-                } else {
-                    editor.deleteSelection();
-                    editor.splitAtCaret();
-                }
+                editor.deleteSelection();
+                editor.splitAtCaret();
                 break;
         }
     },

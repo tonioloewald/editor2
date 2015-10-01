@@ -280,10 +280,10 @@
             var start = sel.find('.caret-start');
             var end = sel.find('.caret');
             var temp = false;
-            if(start.length === 0){
+            if(end.length === 0){
                 return;
-            } else if(end.length === 0){
-                end = start;
+            } else if(start.length === 0){
+                start = end;
             } else if(end.length && end.isBefore(start)){
                 temp = start;
                 start = end;
