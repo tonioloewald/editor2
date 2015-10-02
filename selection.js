@@ -267,6 +267,7 @@
             var sel = this;
             if(first.length === 0 || last.length === 0){
                 console.error('Bad range, missing boundary', first, last);
+                return;
             }
             if(first.is('.caret-start,.caret')){
                 first = first.nextLeafNode();
@@ -281,8 +282,8 @@
                 $(sel.caretStart).insertBefore(first.firstLeafNode().parent());
                 $(sel.caret).insertAfter(last.lastLeafNode().parent());
             } else {
-                $(sel.caret).insertBefore(last.firstLeafNode().parent());
-                $(sel.caretStart).insertAfter(first.lastLeafNode().parent());
+                $(sel.caretStart).insertBefore(last.firstLeafNode().parent());
+                $(sel.caret).insertAfter(first.lastLeafNode().parent());
             }
             sel.mark();
             return sel;
