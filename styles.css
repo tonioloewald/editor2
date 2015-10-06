@@ -153,3 +153,6 @@ body {
     right: -212px;
     max-width: 200px;
 }
+.editable ul, .editable ol {
+    padding-left: 30px;
+}

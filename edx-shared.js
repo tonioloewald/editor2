@@ -1,4 +1,4 @@
-/*
+/**
     # Shared Utilities
 
     Simple jQuery plugins used in other modules.
@@ -12,6 +12,11 @@ $.fn.loadFragment = function(url){
     var elt = this;
     return $.ajax(url).success(function(html){
         $('<div>').append(html).contents().appendTo(elt);
+        $.each(elt.leafNodes(), function(){
+            if(this.nodeType === 3 && this.data.match(/^\s*$/)){
+                $(this).remove();
+            }
+        });
     });
 };
 

@@ -1,3 +1,48 @@
+/**
+    # Editable
+
+    Replacement for contenteditable editing.
+
+    ## Usage
+
+    // create an editable element
+    $(selector).makeEditable(options_object);
+
+    // retrieve reference to editor object
+    var editable = $(selector).data().editable;
+
+    ## Tools
+
+    You can create tools for the editable very easily using
+    the editor's doCommand() method. But if you want the editor
+    to automatically manage tools for you then you can pass tool containers
+    to the editor:
+
+    $(selector).makeEditable({tools: '.toolbar'});
+
+    Example tools:
+
+    <pre>
+        <button data-shortcut="ctrl+b" value="setText font-weight bold"><b>B</b></button>
+    </pre>
+
+    data-shortcut lets you provide one or more keyboard shortcuts for a command.
+    value is the command that is passed to the editor.
+
+    ## Commands
+
+    setText css-property value // styles selected characters
+    setBlocks css-property value // styles selected blocks
+    updateUndo undo|redo
+    setBlockType h1|h2|p|...
+    annotate annotationClass // annotates with a clone of .annotation-template .annotationClass
+
+    ## Annotations
+
+    INPUT and TEXTAREA elements within an annotation are automatically serialized.
+    Any other behavior should be implemented via standard event listeners, etc., ideally
+    at the editor's root level.
+*/
 /*global jQuery*/
 /*jshint laxbreak: true */
 
@@ -95,7 +140,7 @@ Editable.prototype = {
 
         if(editable.options.tools){
             editable.tools = $(editable.options.tools).on('click.editable', 'button', editable, editable.doCommand)
-                                                  .on('change.editable', 'select', editable, editable.doCommand);
+                                                      .on('change.editable', 'select', editable, editable.doCommand);
         }
         editable.root.on('selectionchanged.editable', function(evt){
             editable.updateUndo('new', 'selectionchanged');
@@ -158,7 +203,7 @@ Editable.prototype = {
     },
     /* tool commands */
     doCommand: function(evt){
-        var editable = evt.data,
+        var editable = typeof evt === 'object' ? evt.data : evt,
             command = $(this).attr('value') || $(this).val(),
             parameters = command.split(' '),
             fn;

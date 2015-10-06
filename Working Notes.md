@@ -6,26 +6,31 @@
 
 ## To Do
 
-* editorX, editor -> editable
-* documentation
+* editorX, editor -> editable **DONE**
+* documentation *in progress*
 * test serialization, especially of annotations
-* Arrow keys
-    * left/right
-    * up/down
-* Shift-arrows to select
-* plugin architecture
-* Home / End
-* Option-arrows for faster cursor movement
+    * serialize checkboxes, radio buttons
+* Low level keyboard behavior
+    * Arrow keys
+        * left/right
+        * up/down
+    * Shift-arrows to select
+    * Home / End
+    * Option-arrows for faster cursor movement
+* plugin architecture **DONE** (extend editavle.prototype.commands)
 * copy
 * paste
-* ul, ol
-* tables
-* local editor-base, e.g. td, th, li
-* shortcuts
-* active-for-selection for both character and paragraph commands
+* More core functionality
+    * local editor-base, e.g. td, th, li
+    * ul, ol
+    * tables
+    * correct behavior when you hit TAB or RETURN in a TR
+* Tools
+    * shortcuts
+    * active-for-selection for both character and paragraph commands
 * justification menu **DONE**
 * font-size menu **DONE**
-* font menu
+* font menu **DONE**
 * hilite **DONE**
 * subscript, superscript
 * line-height **DONE**
