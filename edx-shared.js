@@ -11,7 +11,7 @@
 $.fn.loadFragment = function(url){
     var elt = this;
     return $.ajax(url).success(function(html){
-        var content = $('<div>').append(html).contents().appendTo(elt);
+        $('<div>').append(html).contents().appendTo(elt);
     });
 };
 

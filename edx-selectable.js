@@ -36,7 +36,7 @@
                 // for selection by words:
                 var pieces;
                 if(byWord){
-                    pieces = this.textContent.match(/\s+|\w+|[^\w^\s]+/g);
+                    pieces = this.textContent.match(/\s+|\w+|[^\w\s]+/g);
                 } else {
                     pieces = this.textContent.split(''); // new String(this.textContent);
                 }

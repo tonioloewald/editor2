@@ -42,7 +42,7 @@ Editable.prototype = {
         '-khtml-user-select': 'none',
         '-moz-user-select': 'none',
         '-ms-user-select': 'none',
-        'user-select': 'none',
+        'user-select': 'none'
     },
     cssSelect: {
         '-webkit-touch-callout': 'text',
@@ -50,7 +50,7 @@ Editable.prototype = {
         '-khtml-user-select': 'text',
         '-moz-user-select': 'text',
         '-ms-user-select': 'text',
-        'user-select': 'text',
+        'user-select': 'text'
     },
     setup: function(){
         var editable = this;
