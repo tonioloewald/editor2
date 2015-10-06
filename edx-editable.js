@@ -29,6 +29,8 @@
     data-shortcut lets you provide one or more keyboard shortcuts for a command.
     value is the command that is passed to the editor.
 
+    A tool can have multiple commands (separated by semicolons).
+
     ## Commands
 
     setText css-property value // styles selected characters
@@ -56,6 +58,21 @@ $.fn.makeEditable = function(options){
 
 function deletableFilter(node){
     return node.nodeType !== 3 || node.textContent !== '';
+}
+
+function topSingleParentAncestor(node, filter){
+    if(filter === undefined){
+        filter = function(){ return true; };
+    }
+    while(
+        node.parentNode
+        && node.parentNode.childNodes.length === 1
+        && filter(node.parentNode)
+    ){
+        node = node.parentNode;
+    }
+
+    return node;
 }
 
 function Editable(elt, options){
@@ -178,10 +195,13 @@ Editable.prototype = {
             editable.selectable.normalize().markBounds();
             nodes = editable.selectedLeafNodes();
             $.each(nodes, function(){
-                if(this.nodeType === 3 && this.parentNode.childNodes.length === 1){
-                    $(this.parentNode).css(attribute, setting);
-                } else if(this.nodeType === 3) {
-                    $(this).wrap(styledSpan);
+                // TODO utility method for finding highest singleton
+                if($(this).parent().css(attribute) !== setting){
+                    if(this.nodeType === 3 && this.parentNode.childNodes.length === 1){
+                        $(this.parentNode).css(attribute, setting);
+                    } else if(this.nodeType === 3) {
+                        $(this).wrap(styledSpan);
+                    }
                 }
             });
             editable.selectable.markBounds().focus();
@@ -204,17 +224,24 @@ Editable.prototype = {
     /* tool commands */
     doCommand: function(evt){
         var editable = typeof evt === 'object' ? evt.data : evt,
-            command = $(this).attr('value') || $(this).val(),
-            parameters = command.split(' '),
+            data = $(this).attr('value') || $(this).val(),
+            commands = data.split(/;\s*/),
             fn;
 
         // console.log(command);
-        command = parameters.shift();
-        fn = editable.commands[command];
-        if(fn){
-            fn.apply(editable, parameters);
-        } else {
-            console.error('unrecognized command', command);
+
+        while(commands.length){
+            var pieces = commands.shift().split(/\s+/),
+                command = pieces.shift();
+            if(!command){
+                continue;
+            }
+            fn = editable.commands[command];
+            if(fn){
+                fn.apply(editable, pieces);
+            } else {
+                console.error('unrecognized command', command);
+            }
         }
     },
     /* event handlers */
@@ -242,10 +269,7 @@ Editable.prototype = {
                 if(node.nodeType === 3 && node.length > 1){
                     node.data = node.data.substr(0, node.length - 1);
                 } else {
-                    while(node.parentNode.childNodes.length === 1){
-                        node = node.parentNode;
-                    }
-                    $(node).remove();
+                    $(topSingleParentAncestor(node)).remove();
                     editable.normalize();
                 }
                 if(
@@ -294,13 +318,10 @@ Editable.prototype = {
                 }
                 // move up the chain of nodes that will be empty
                 // note that we cannot be starting inside a singleton tag (e.g. input)
-                while(
-                    node.parentNode.parentNode
-                    && node.parentNode.parentNode !== editable.root[0]
-                    && node.parentNode.childNodes.length === 1
-                ){
-                    node = node.parentNode;
-                }
+                node = topSingleParentAncestor(node, function(node){
+                    return node.parentNode
+                           && node.parentNode !== editable.root[0];
+                });
                 $(node).remove();
             });
             beforeBlock.insertBefore(block);
@@ -440,11 +461,7 @@ Editable.prototype = {
 
         if(nodes.length){
             $.each(nodes, function(){
-                var node = this;
-                while(node.parentNode.childNodes.length === 1){
-                    node = node.parentNode;
-                }
-                $(node).remove();
+                $(topSingleParentAncestor(this)).remove();
             });
             wasAnythingDeleted = true;
         }
