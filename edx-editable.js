@@ -241,7 +241,7 @@ Editable.prototype = {
             }
             $.each(nodes, function(idx){
                 var node = inBeforeBlock ? beforeNodes[idx] : nodes[idx];
-                if($(this).is('.caret')){
+                if($(this).is('.sel-start,.sel-end')){
                     node = beforeNodes[idx];
                     inBeforeBlock = true;
                 }
@@ -257,7 +257,7 @@ Editable.prototype = {
                 $(node).remove();
             });
             beforeBlock.insertBefore(block);
-            editable.selectable.unmark();
+            editable.selectable.markBounds();
             return true;
         }
     },
@@ -405,11 +405,11 @@ Editable.prototype = {
         if(blocks.length > 1){
             // merge paragraphs
             blocks.first().detach().contents().prependTo(blocks.last());
-            editable.updateUndo("new").selectable.selectionChanged();
+            editable.selectable.markBounds();
+            editable.focus();
         } else if (wasAnythingDeleted){
             editable.updateUndo().selectable.selectionChanged();
         }
-
 
         return wasAnythingDeleted;
     },
