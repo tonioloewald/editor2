@@ -7,6 +7,7 @@
 ## To Do
 
 * editorX, editor -> editable
+* documentation
 * test serialization, especially of annotations
 * Arrow keys
     * left/right

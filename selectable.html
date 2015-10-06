@@ -14,14 +14,14 @@
         text.
     </p>
     <div class="tools"></div>
-    <div class="editor"></div>
+    <div class="editable"></div>
     <script src="lib/jquery-2.1.4.js"></script>
     <script src="shared.js"></script>
     <script src="selection.js"></script>
     <script>
-        $('.editor').loadFragment('constitution.html').then(function(){
+        $('.editable').loadFragment('constitution.html').then(function(){
             console.clear();
-            $('.editor').makeSelectable();
+            $('.editable').makeSelectable();
         });
     </script>
 </body>

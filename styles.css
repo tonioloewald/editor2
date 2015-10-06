@@ -3,33 +3,33 @@ html {
     background-color: #ddd;
     font: 14px "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
-.editor {
+.editable {
     border: 1px solid #aaa;
     font: 14px Georgia, serif;
     height: 600px;
     background: #ccc;
     overflow-y: scroll;
 }
-.editor > * {
+.editable > * {
     position: relative;
     padding: 8px 12px;
     background: white;
     margin: 0;
     margin-right: 224px;
 }
-.editor > blockquote {
+.editable > blockquote {
     padding: 8px 48px;
 }
-.editor .selected-block, .editor .current {
+.editable .selected-block, .editable .current {
     background: #ddf;
 }
-.editor hr {
+.editable hr {
     padding: 0;
 }
-.editor-bold {
+.editable-bold {
     font-weight: bold;
 }
-.editor-italic {
+.editable-italic {
     font-style: italic;
 }
 .noselect {
@@ -69,7 +69,7 @@ body {
     background-color: #faa;
     width: 4px;
 }
-.caret, .caret-start {
+.caret, .sel-start, .sel-end {
     display: inline-block;
     /* height: 20px; */
     font-size: inherit;
@@ -81,8 +81,13 @@ body {
     margin-top: -6px;
     background-color: black;
 }
-.caret-start {
-    background-color: blue;
+.sel-start {
+    min-height: 6px;
+    background-color: green;
+}
+.sel-end {
+    min-height: 6px;
+    background-color: red;
 }
 
 .caret {
@@ -110,7 +115,7 @@ body {
 .tools button {
     background-color: #ccc;
 }
-.editor-active-for-selection {
+.editable-active-for-selection {
     background-color: #bbd;
 }
 .spanified-word {

@@ -1,14 +1,10 @@
 /*
-    # DIY selection
+    # Selectable
 
-    Disables browser selection behavior
+    Disables and replaces browser selection behavior
     Selections are marked with *selected* class
-    Selection boundaries are marked with span.caret-start and span.caret
-
-    ## TO DO
-
-    Implement touch controls
-    Move common root jQuery extensions out into their own file
+    When the user clicks, span.sel-start marks the spot where the mousedown
+    occurred, and span.sel-end marks where the selection ended.
 */
 /*jshint laxbreak: true */
 
@@ -26,10 +22,6 @@
 
     function isTextNode(node){
         return node.nodeType === 3 && $(node).closest('.do-not-spanify').length === 0;
-    }
-
-    function isSelectable(node){
-        return $(node).closest('.not-selectable').length === 0;
     }
 
     $.fn.spanify = function(makeSpans, byWord){
@@ -70,63 +62,6 @@
         return this;
     };
 
-    function leafNodesBetween(root, nodeA, nodeB, filter){
-        root = $(root)[0];
-        nodeA = $(nodeA);
-        nodeB = $(nodeB);
-        var first = nodeB,
-            last = nodeA,
-            nodes = [];
-        if( nodeA.isBefore(nodeB) ){
-            first = nodeA;
-            last = nodeB;
-        }
-        var firstTop = first.parent()[0] === root ? first : first.parentsUntil(root).last();
-        var lastTop = last.parent()[0] === root ? last : last.parentsUntil(root).last();
-        first = first[0];
-        last = last[0];
-        if(firstTop[0] === lastTop[0]){
-            // leaves in firstTop that are between first and last
-            $.each(firstTop.leafNodes(), function(){
-                if(
-                    first.compareDocumentPosition(this) & 4
-                    && this.compareDocumentPosition(last) & 4
-                ){
-                    nodes.push(this);
-                }
-            });
-        } else {
-            // leaves in the firstTop that are after first
-            $.each(firstTop.leafNodes(), function(){
-                if(first.compareDocumentPosition(this) & 4){
-                    nodes.push(this);
-                }
-            });
-            // leaves in the top nodes between firstTop and lastTop
-            nodes = nodes.concat(firstTop.nextUntil(lastTop).leafNodes());
-            // leaves in lastop that are before last
-            $.each(lastTop.leafNodes(), function(){
-                if(this.compareDocumentPosition(last) & 4){
-                    nodes.push(this);
-                }
-            });
-        }
-        if(typeof filter === 'string'){
-            var selector = filter;
-            filter = function(){ return $(this).is(selector); };
-        }
-        if(typeof filter === 'function'){
-            var nodeList = nodes;
-            nodes = [];
-            $.each(nodeList, function(){
-                if(filter(this)){
-                    nodes.push(this);
-                }
-            });
-        }
-        return nodes;
-    }
-
     function Selectable(root){
         this.root = $(root);
         this.selecting = false;
@@ -139,112 +74,112 @@
         setup: function(){
             var sel = this;
             sel.root.allowSelection(false);
-            sel.root.on('mousemove.selectable', '*', function(evt){
-                if($(evt.target).is('.not-selectable') || $(evt.target).closest('.not-selectable').length > 0){
-                    return;
+            sel.root.on('mousemove.selectable', '*', sel, sel.mousemove)
+                    .on('mousedown.selectable', '*', sel, sel.mousedown)
+                    .on('mouseup.selectable', '*', sel, sel.mouseup);
+        },
+        mousemove: function(evt){
+            var sel = evt.data,
+                elt = $(this);
+            if(
+                $(evt.target).is('.not-selectable')
+                || $(evt.target).closest('.not-selectable').length > 0
+            ){
+                return;
+            }
+            elt.spanify(true, true);
+            if(sel.selecting && elt.is('.spanified')){
+                if((evt.clientX - elt.offset().left) < elt.width() / 2){
+                    sel.find('.sel-end').insertBefore(elt);
+                } else {
+                    sel.find('.sel-end').insertAfter(elt);
                 }
-                var elt = $(this);
-                elt.spanify(true, true);
-                if(sel.selecting && elt.is('.spanified')){
-                    sel.find('.caret').remove();
+                sel.extendSelection();
+            }
+            evt.preventDefault();
+            evt.stopPropagation();
+        },
+        mousedown: function(evt){
+            var sel = evt.data,
+                elt = $(this);
+            if($(evt.target).is('.not-selectable') || $(evt.target).closest('.not-selectable').length > 0){
+                return;
+            }
+            sel.selecting = evt.originalEvent.detail;
+            if(elt.is('.spanified')){
+                if(evt.shiftKey){
+                    // place selection end
                     if((evt.clientX - elt.offset().left) < elt.width() / 2){
-                        $(sel.caret).insertBefore(elt);
+                        sel.find('.sel-end').insertBefore(elt);
                     } else {
-                        $(sel.caret).insertAfter(elt);
+                        sel.find('.sel-end').insertAfter(elt);
                     }
                     sel.extendSelection();
-                }
-                evt.preventDefault();
-                evt.stopPropagation();
-            }).on('mousedown.selectable', '*', function(evt){
-                if($(evt.target).is('.not-selectable') || $(evt.target).closest('.not-selectable').length > 0){
-                    return;
-                }
-                var elt = $(this);
-                sel.selecting = evt.originalEvent.detail;
-                if(elt.is('.spanified')){
-                    if(evt.shiftKey){
-                        sel.find('.caret').remove();
-                        if((evt.clientX - elt.offset().left) < elt.width() / 2){
-                            $(sel.caret).insertBefore(elt);
-                        } else {
-                            $(sel.caret).insertAfter(elt);
-                        }
-                        sel.mark();
-                    } else if(sel.selecting === 1){
-                        sel.unmark();
-                        sel.removeCarets();
-                        if((evt.clientX - elt.offset().left) < elt.width() / 2){
-                            $(sel.caretStart).add($(sel.caret)).insertBefore(elt);
-                        } else {
-                            $(sel.caretStart).add($(sel.caret)).insertAfter(elt);
-                        }
+                } else if(sel.selecting === 1){
+                    // begin selection
+                    sel.find('.sel-start,.sel-end').remove();
+                    sel.selecting = 1;
+                    if((evt.clientX - elt.offset().left) < elt.width() / 2){
+                        sel.bounds().insertBefore(elt);
                     } else {
-                        sel.extendSelection();
+                        sel.bounds().insertAfter(elt);
                     }
-                }
-                evt.preventDefault();
-                evt.stopPropagation();
-            }).on('mouseup.selectable', function(evt){
-                if($(evt.target).is('.not-selectable') || $(evt.target).closest('.not-selectable').length > 0){
-                    return;
-                }
-                // console.log(sel.selecting);
-                if(sel.selecting){
+                } else {
+                    // change selection mode and extend selection
                     sel.extendSelection();
-                    sel.selecting = false;
                 }
-                sel.selectionChanged();
-                // if we're currently editable then focus the caret
-                sel.find('input.caret').focus();
-                evt.preventDefault();
-                evt.stopPropagation();
-            });
+            }
+            evt.preventDefault();
+            evt.stopPropagation();
+        },
+        mouseup: function(evt){
+            var sel = evt.data;
+            if($(evt.target).is('.not-selectable') || $(evt.target).closest('.not-selectable').length > 0){
+                return;
+            }
+            if(sel.selecting){
+                sel.extendSelection();
+                sel.selecting = false;
+            }
+            sel.selectionChanged();
+            evt.preventDefault();
+            evt.stopPropagation();
         },
         /* Synthetic event triggered by selection change */
         selectionChanged: function(){
             this.root.trigger('selectionchanged');
         },
         caret: '<span class="caret"></span>',
-        caretStart: '<span class="caret-start"></span>',
-        removeCarets: function(){
-            // console.log('removing carets');
-            this.find('.caret,.caret-start').remove();
-            return this;
+        selStart: '<span class="sel-start"></span>',
+        selEnd: '<span class="sel-end"></span>',
+        bounds: function(){
+            return $(this.selStart + this.selEnd);
         },
         extendSelection: function(){
-            var sel = this, first, last;
+            var sel = this,
+                first = sel.find('.sel-start'),
+                last = sel.find('.sel-end');
             switch(sel.selecting){
                 case 1:
-                    sel.mark();
+                    // do nothing
                     break;
                 case 2:
                     // word select
-                    first = sel.find('.caret-start');
                     if(first.closest('.spanified-word').length){
                         first = first.closest('.spanified-word');
                     }
-                    last = sel.find('.caret');
-                    if(!last.length){
-                        last = first;
-                    } else if(last.closest('.spanified-word').length){
+                    if(last.closest('.spanified-word').length){
                         last = last.closest('.spanified-word');
-                    }
-                    if(first.length && last.length){
-                        sel.markRange(first, last);
                     }
                     break;
                 default:
                     // block select
-                    first = sel.find('.caret-start')
-                               .parentsUntil(sel.root).last();
-                    last = sel.find('.caret')
-                              .parentsUntil(sel.root).last();
-                    if(last.length === 0){
-                        last = first;
-                    }
-                    sel.markRange(first, last);
+                    first = first.parentsUntil(sel.root).last();
+                    last = last.parentsUntil(sel.root).last();
                     break;
+            }
+            if(first.length){
+                sel.markRange(first, last);
             }
             return this;
         },
@@ -252,86 +187,94 @@
             return this.root.find(selector);
         },
         unmark: function(){
+            this.find('.selected').removeClass('selected');
             this.find('span.unwrap').each(function(){
                 if(this.classList.length === 1 && this.attributes.length === 1){
                     $(this).contents().unwrap();
                 }
             });
-            this.find('.selected').removeClass('selected');
             this.find('.selected-block').removeClass('selected-block');
             this.find('.first-block').removeClass('first-block');
             this.find('.last-block').removeClass('last-block');
             return this;
         },
+        isBlock: function(node){
+            return $(node)[0].parentNode === this.root[0];
+        },
         markRange: function(first, last){
             var sel = this;
-            if(first.length === 0 || last.length === 0){
-                console.error('Bad range, missing boundary', first, last);
+            if(first.length === 0){
+                console.error('Bad range -- need a selection bound');
                 return;
             }
-            if(first.is('.caret-start,.caret')){
-                first = first.nextLeafNode();
+            if(last.length === 0){
+                last = first;
             }
-            if(last.is('.caret,.caret-start')){
-                last = last.previousLeafNode();
-            }
-            sel.removeCarets();
 
-            // console.log('placing carets at range boundaries', first, last);
-            if(first.isBefore(last)){
-                $(sel.caretStart).insertBefore(first.firstLeafNode().parent());
-                $(sel.caret).insertAfter(last.lastLeafNode().parent());
-            } else {
-                $(sel.caretStart).insertBefore(last.firstLeafNode().parent());
-                $(sel.caret).insertAfter(first.lastLeafNode().parent());
+            if(last.isBefore(first)){
+                var temp = last;
+                last = first;
+                first = temp;
             }
-            sel.mark();
+            sel.unmark();
+
+            // Mark selected blocks
+            var firstTopNode = sel.isBlock(first)
+                               ? first.addClass('first-block')
+                               : first.parentsUntil(sel.root).last().addClass('first-block');
+            var lastTopNode = sel.isBlock(last)
+                               ? last.addClass('last-block')
+                               : last.parentsUntil(sel.root).last().addClass('last-block');
+            var blocks;
+            // mark block range as selected
+            if(firstTopNode[0] === lastTopNode[0]){
+                blocks = firstTopNode.addClass('selected-block');
+            } else {
+                blocks = firstTopNode.add(firstTopNode.nextUntil(lastTopNode))
+                                     .add(lastTopNode)
+                                     .addClass('selected-block');
+            }
+            sel.root.children().not('.selected-block').spanify(false);
+
+            // Mark selected leaf nodes
+            if(first.is('.sel-start,.sel-end')){
+                first = first.nextLeafNode();
+            } else if(sel.isBlock(first)){
+                first = first.firstLeafNode();
+            } else {
+                first = first.previousLeafNode();
+            }
+            if(last.is('.sel-start,.sel-end')){
+                last = last.previousLeafNode();
+            } else if(sel.isBlock(last)){
+                last = last.lastLeafNode();
+            } else {
+                last = last.nextLeafNode();
+            }
+            var nodes = blocks.leafNodes();
+            sel.markNode(first);
+            sel.markNode(last);
+            for(var i = nodes.indexOf(first[0]); i <= nodes.indexOf(last[0]); i++){
+                if(first.isBefore(nodes[i]) && $(nodes[i]).isBefore(last)){
+                    sel.markNode(nodes[i]);
+                }
+            }
+
             return sel;
         },
-        mark: function(){
-            var sel = this;
-            sel.unmark();
-            var start = sel.find('.caret-start');
-            var end = sel.find('.caret');
-            var temp = false;
-            if(end.length === 0){
-                return;
-            } else if(start.length === 0){
-                start = end;
-            } else if(end.length && end.isBefore(start)){
-                temp = start;
-                start = end;
-                end = temp;
-            }
-
-            var nodes = leafNodesBetween(sel.root, start, end, isSelectable);
-            var firstTopNode = start.parentsUntil(sel.root).last().addClass('first-block');
-            var lastTopNode = end.parentsUntil(sel.root).last().addClass('last-block');
-            var selectedSpan = $('<span>').addClass('selected unwrap');
-            firstTopNode.addClass('selected-block');
-            if(firstTopNode[0] !== lastTopNode[0]){
-                firstTopNode.add(firstTopNode.nextUntil(lastTopNode))
-                            .add(lastTopNode)
-                            .addClass('selected-block');
-            }
-
-            sel.root.children().not('.selected-block').spanify(false);
-            $.each(nodes, function(){
-                var node = this;
-                if(node.nodeType === 3){
-                    if(node.parentNode.childNodes.length === 1){
-                        // text node that is an only child
-                        $(node.parentNode).addClass('selected');
-                    } else {
-                        $(node).wrap(selectedSpan.clone());
-                    }
+        markNode: function(node){
+            node = $(node)[0];
+            if(node.nodeType === 3){
+                if(node.parentNode.childNodes.length === 1){
+                    // text node that is an only child
+                    $(node.parentNode).addClass('selected');
                 } else {
-                    // style-able node (e.g. <img>, <hr>)
-                    $(node).addClass('selected');
+                    $(node).wrap($('<span>').addClass('selected unwrap'));
                 }
-            });
-
-            return sel;
+            } else {
+                // style-able node (e.g. <img>, <hr>)
+                $(node).not('.sel-start,.sel-end').addClass('selected');
+            }
         },
         normalize: function(){
             var rootNode = this.root[0],

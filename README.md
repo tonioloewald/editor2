@@ -1,4 +1,4 @@
-# editor2
+# Editable
 
 Rich text editor **with no contentEditable** and **no dependency on browser selection or ranges**.
 
@@ -6,7 +6,7 @@ Rich text editor **with no contentEditable** and **no dependency on browser sele
 
 Having written a pretty robust rich text editor based on contentEditable/getSelection and then seen it have horrific 
 performance issues with recent versions of IE, and even more horrific accessibility issues everywhere, and weird
-compatibility issues even on the most modern browsers, I came to the conclusion that what the world really needed 
+compatibility issues even on the most modern browsers, I came to the conclusion that what the world really needed
 was an open source rich text editor that doesn't use contenteditable, getSelection, or any of that useless crap.
 
 And (aside from when I add PASTE support) it does not and will not use any contenteditable properties.

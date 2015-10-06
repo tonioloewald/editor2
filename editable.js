@@ -4,9 +4,8 @@
 (function($){
 "use strict";
 
-$.fn.makeEditor = function(options){
-    this.data('editor', new Editor(this, options));
-    // console.log(this, this.data('editor'));
+$.fn.makeEditable = function(options){
+    this.data('editable', new Editable(this, options));
     return this;
 };
 
@@ -14,7 +13,7 @@ function deletableFilter(node){
     return node.nodeType !== 3 || node.textContent !== '';
 }
 
-function Editor(elt, options){
+function Editable(elt, options){
     this.root = $(elt);
     if(!elt.data().selectable){
         elt.makeSelectable();
@@ -37,7 +36,7 @@ function Editor(elt, options){
     return this;
 }
 
-Editor.prototype = {
+Editable.prototype = {
     cssNoSelect: {
         '-webkit-touch-callout': 'none',
         '-webkit-user-select': 'none',
@@ -55,12 +54,11 @@ Editor.prototype = {
         'user-select': 'text',
     },
     setup: function(){
-        var editor = this;
-        editor.root.attr('tabindex', 0);
-        // editor.root.on('mouseup.editor', editor, editor.mouseup);
-        editor.root.on('keydown.editor', 'input.caret', editor, editor.keydown);
-        editor.root.on('keypress.editor', 'input.caret', editor, editor.keypress);
-        editor.root.on('click.annotation', '.annotation .delete', function(evt){
+        var editable = this;
+        editable.root.attr('tabindex', 0);
+        editable.root.on('keydown.editable', 'input.caret', editable, editable.keydown);
+        editable.root.on('keypress.editable', 'input.caret', editable, editable.keypress);
+        editable.root.on('click.annotation', '.annotation .delete', function(evt){
             var annotation = $(evt.target).closest('.annotation');
             annotation.find('.annotation-body').remove();
             if(annotation.contents().length){
@@ -70,7 +68,7 @@ Editor.prototype = {
             }
         });
         // persist changes to the DOM
-        editor.root.on('change.annotation', 'textarea,input,select', function(evt){
+        editable.root.on('change.annotation', 'textarea,input,select', function(evt){
             var elt = $(evt.target),
                 value = elt.val();
             switch(elt[0].nodeName){
@@ -93,26 +91,26 @@ Editor.prototype = {
                     break;
             }
         });
-        editor.root.append($('<p>').append(editor.selectable.caret));
-        editor.normalize();
+        editable.root.append($('<p>').append(editable.selectable.caret));
+        editable.normalize();
 
-        if(editor.options.tools){
-            editor.tools = $(editor.options.tools).on('click.editor', 'button', editor, editor.doCommand)
-                                                  .on('change.editor', 'select', editor, editor.doCommand);
+        if(editable.options.tools){
+            editable.tools = $(editable.options.tools).on('click.editable', 'button', editable, editable.doCommand)
+                                                  .on('change.editable', 'select', editable, editable.doCommand);
         }
-        editor.root.on('selectionchanged.editor', function(evt){
-            editor.updateUndo('new', 'selectionchanged');
+        editable.root.on('selectionchanged.editable', function(evt){
+            editable.updateUndo('new', 'selectionchanged');
         });
-        editor.updateUndo("init");
-        editor.undoDepth = 0;
-        editor.find('.caret').focus();
+        editable.updateUndo("init");
+        editable.undoDepth = 0;
+        editable.find('.caret').focus();
     },
     commands: {
         // TODO implement list and table support
-        // TODO implement concept of an editor sub-base (e.g. td, th, li, or specified)
+        // TODO implement concept of an editable sub-base (e.g. td, th, li, or specified)
         setBlockType: function(newNodeType){
-            var editor = this,
-                blocks = editor.find('.selected-block');
+            var editable = this,
+                blocks = editable.find('.selected-block');
 
             blocks.each(function(){
                 var newBlock = $('<' + newNodeType + '>').append($(this).contents())
@@ -124,13 +122,13 @@ Editor.prototype = {
             this.selectedBlocks().css(attribute, setting);
         },
         setText: function(attribute, setting){
-            var editor = this,
+            var editable = this,
                 nodes,
                 styledSpan = $('<span>').css(attribute, setting);
 
-            editor.selectable.unmark().root.spanify(false);
-            editor.selectable.normalize().mark();
-            nodes = editor.selectedLeafNodes();
+            editable.selectable.unmark().root.spanify(false);
+            editable.selectable.normalize().mark();
+            nodes = editable.selectedLeafNodes();
             $.each(nodes, function(){
                 if(this.nodeType === 3 && this.parentNode.childNodes.length === 1){
                     $(this.parentNode).css(attribute, setting);
@@ -138,57 +136,57 @@ Editor.prototype = {
                     $(this).wrap(styledSpan);
                 }
             });
-            editor.updateUndo("new");
+            editable.updateUndo("new");
         },
         updateUndo: function(command){
             this.updateUndo(command);
         },
         annotate: function(type){
-            var editor = this,
+            var editable = this,
                 annotationSpan = $('<span>').addClass('annotation do-not-spanify not-selectable not-editable');
-            if(editor.insertionPoint()){
+            if(editable.insertionPoint()){
                 // TODO wrap annotation span around non-empty selection
                 annotationSpan.append($('.annotation-template .' + type).clone().addClass('annotation-body'))
-                              .insertAfter(editor.find('.caret-start,.caret').last());
+                              .insertAfter(editable.insertionPoint());
             }
-            editor.updateUndo("new");
+            editable.updateUndo("new");
         }
     },
     /* tool commands */
     doCommand: function(evt){
-        var editor = evt.data,
+        var editable = evt.data,
             command = $(this).attr('value') || $(this).val(),
             parameters = command.split(' '),
             fn;
 
         // console.log(command);
         command = parameters.shift();
-        fn = editor.commands[command];
+        fn = editable.commands[command];
         if(fn){
-            fn.apply(editor, parameters);
+            fn.apply(editable, parameters);
         } else {
             console.error('unrecognized command', command);
         }
     },
     /* event handlers */
     contentKey: function(key){
-        var editor = this;
+        var editable = this;
         if(typeof key === 'number'){
             key = String.fromCharCode(key);
         }
         // TODO track change add
-        editor.insertionPoint().before(document.createTextNode(key));
-        editor.normalize().updateUndo();
+        editable.insertionPoint().before(document.createTextNode(key));
+        editable.normalize().updateUndo();
     },
     backspace: function(){
-        var editor = this;
-        if(!editor.deleteSelection()){
-            var insertionPoint = editor.insertionPoint(),
-                node = insertionPoint.previousLeafNode(editor.root, deletableFilter),
-                caretBlock = editor.block(insertionPoint),
-                deletionBlock = editor.block(node);
+        var editable = this;
+        if(!editable.deleteSelection()){
+            var insertionPoint = editable.insertionPoint(),
+                node = insertionPoint.previousLeafNode(editable.root, deletableFilter),
+                caretBlock = editable.block(insertionPoint),
+                deletionBlock = editable.block(node);
             if(node.length){
-                deletionBlock = editor.block(node);
+                deletionBlock = editable.block(node);
                 node = node[0];
                 // TODO track deletion
                 // TODO merge paragraphs
@@ -199,16 +197,16 @@ Editor.prototype = {
                         node = node.parentNode;
                     }
                     $(node).remove();
-                    editor.normalize();
+                    editable.normalize();
                 }
                 if(
-                    $.contains(editor.root[0], deletionBlock[0])
+                    $.contains(editable.root[0], deletionBlock[0])
                     && deletionBlock[0] !== caretBlock[0]
                 ){
                     caretBlock.detach().contents().appendTo(deletionBlock);
-                    editor.find('.caret').focus();
+                    editable.find('.caret').focus();
                 }
-                editor.updateUndo();
+                editable.updateUndo();
             }
         }
     },
@@ -228,9 +226,9 @@ Editor.prototype = {
     end: function(){
     },
     splitAtCaret: function(){
-        var editor = this;
-        if(editor.insertionPoint()){
-            var block = editor.block(editor.find('.caret')),
+        var editable = this;
+        if(editable.insertionPoint()){
+            var block = editable.block(editable.find('.caret')),
                 beforeBlock = block.clone(),
                 nodes = block.leafNodes(),
                 beforeNodes = beforeBlock.leafNodes(),
@@ -240,7 +238,7 @@ Editor.prototype = {
             }
             $.each(nodes, function(idx){
                 var node = inBeforeBlock ? beforeNodes[idx] : nodes[idx];
-                if($(this).is('.caret-start,.caret')){
+                if($(this).is('.caret')){
                     node = beforeNodes[idx];
                     inBeforeBlock = true;
                 }
@@ -249,19 +247,18 @@ Editor.prototype = {
                 }
                 $(node).remove();
             });
-            // beforeBlock.find('.caret-start,.caret').remove();
             beforeBlock.insertBefore(block);
-            editor.selectable.mark();
+            editable.selectable.mark();
             return true;
         }
     },
     mergeBackAtCaret: function(){
-        var editor = this,
-            block = editor.block(editor.caret);
-        if(previousTextNode(editor.caret[0], block[0], true) === false){
+        var editable = this,
+            block = editable.block(editable.caret);
+        if(previousTextNode(editable.caret[0], block[0], true) === false){
             // at the beginning of a paragraph; merge with previous
             if(block[0].previousSibling){
-                block.prev().append(editor.caret).append(block.contents());
+                block.prev().append(editable.caret).append(block.contents());
                 block.remove();
                 return true;
             }
@@ -269,12 +266,12 @@ Editor.prototype = {
         return false;
     },
     mergeForwardAtCaret: function(){
-        var editor = this,
-            block = editor.block(editor.caret);
-        if(nextTextNode(editor.caret[0], block[0], true) === false) {
+        var editable = this,
+            block = editable.block(editable.caret);
+        if(nextTextNode(editable.caret[0], block[0], true) === false) {
             // at the end of a paragraph; merge with next
             if(block[0].nextSibling){
-                block.next().contents().insertAfter(editor.caret);
+                block.next().contents().insertAfter(editable.caret);
                 block.remove();
                 return true;
             }
@@ -285,16 +282,16 @@ Editor.prototype = {
         if($(evt.target).is('.not-editable')){
             return;
         }
-        var editor = evt.data;
+        var editable = evt.data;
         switch(evt.keyCode){
             case 8:
                 evt.preventDefault();
-                editor.backspace();
+                editable.backspace();
                 break;
             case 13:
                 evt.preventDefault();
-                editor.deleteSelection();
-                editor.splitAtCaret();
+                editable.deleteSelection();
+                editable.splitAtCaret();
                 break;
         }
     },
@@ -303,13 +300,13 @@ Editor.prototype = {
             return;
         }
         // console.log('keypress', evt);
-        var editor = evt.data;
+        var editable = evt.data;
 
         // don't process shortcuts (yet!)
         if(evt.ctrlKey || evt.metaKey){
-            editor.shortcut(evt);
+            editable.shortcut(evt);
         } else {
-            editor.deleteSelection();
+            editable.deleteSelection();
 
             switch(evt.which){
                 case 8:
@@ -317,7 +314,7 @@ Editor.prototype = {
                     console.error('special key slipped through?', evt.which);
                     break;
                 default:
-                    editor.contentKey(evt.which);
+                    editable.contentKey(evt.which);
                     break;
             }
         }
@@ -325,59 +322,59 @@ Editor.prototype = {
         evt.stopPropagation();
     },
     updateUndo: function(command, reason){
-        var editor = this;
-        if(editor.undo === undefined){
+        var editable = this;
+        if(editable.undo === undefined){
             command = "init";
         }
-        if(reason && editor.reasonForLastUndo === reason){
+        if(reason && editable.reasonForLastUndo === reason){
             command = undefined;
         }
-        editor.reasonForLastUndo = reason;
+        editable.reasonForLastUndo = reason;
         switch(command){
             case "init":
                 console.log('initializing undo');
-                editor.undo = [editor.root.html()];
-                editor.undoDepth = 0;
+                editable.undo = [editable.root.html()];
+                editable.undoDepth = 0;
                 break;
             case "new":
                 console.log('new undo buffer');
-                if(editor.undoDepth){
-                    editor.undo = editor.undo.slice(editor.undoDepth);
-                    editor.undoDepth = 0;
+                if(editable.undoDepth){
+                    editable.undo = editable.undo.slice(editable.undoDepth);
+                    editable.undoDepth = 0;
                 }
-                editor.undo.unshift( editor.root.html() );
+                editable.undo.unshift( editable.root.html() );
                 break;
             case "undo":
-                if(editor.undoDepth < editor.undo.length - 1){
-                    editor.undoDepth += 1;
-                    editor.root.html(editor.undo[this.undoDepth]);
-                    editor.find('.caret').focus();
-                    console.log('undo', editor.undoDepth);
+                if(editable.undoDepth < editable.undo.length - 1){
+                    editable.undoDepth += 1;
+                    editable.root.html(editable.undo[this.undoDepth]);
+                    editable.find('.caret').focus();
+                    console.log('undo', editable.undoDepth);
                 }
                 break;
             case "redo":
-                if(editor.undoDepth > 0){
-                    editor.undoDepth -= 1;
-                    editor.root.html(editor.undo[this.undoDepth]);
-                    editor.find('.caret').focus();
-                    console.log('redo', editor.undoDepth);
+                if(editable.undoDepth > 0){
+                    editable.undoDepth -= 1;
+                    editable.root.html(editable.undo[this.undoDepth]);
+                    editable.find('.caret').focus();
+                    console.log('redo', editable.undoDepth);
                 }
                 break;
             default:
-                if(editor.undoDepth || editor.undo.length === 1){
+                if(editable.undoDepth || editable.undo.length === 1){
                     console.log('truncating undo stack; new undo buffer');
-                    editor.undo = editor.undo.slice(editor.undoDepth);
-                    editor.undoDepth = 0;
-                    editor.undo.unshift( editor.root.html() );
+                    editable.undo = editable.undo.slice(editable.undoDepth);
+                    editable.undoDepth = 0;
+                    editable.undo.unshift( editable.root.html() );
                 } else {
                     console.log('updating first undo buffer');
-                    editor.undo[0] = editor.root.html();
+                    editable.undo[0] = editable.root.html();
                 }
         }
-        editor.tools.find('[value="updateUndo undo"]')
-                    .prop('disabled', editor.undoDepth >= editor.undo.length - 1);
-        editor.tools.find('[value="updateUndo redo"]')
-                    .prop('disabled', editor.undoDepth === 0);
+        editable.tools.find('[value="updateUndo undo"]')
+                    .prop('disabled', editable.undoDepth >= editable.undo.length - 1);
+        editable.tools.find('[value="updateUndo redo"]')
+                    .prop('disabled', editable.undoDepth === 0);
     },
     shortcut: function(evt){
         console.log('shortcut', evt);
@@ -401,17 +398,17 @@ Editor.prototype = {
     // scrupulously deletes all selected leaf nodes (and parent nodes left empty)
     // and merges the first and last blocks if the selection spanned multiple blocks
     deleteSelection: function(){
-        var editor = this,
-            blocks = editor.selectedBlocks(),
+        var editable = this,
+            blocks = editable.selectedBlocks(),
             wasAnythingDeleted = false;
 
         // remove completely selected blocks
         blocks.not('.first-block,.last-block').remove();
-        var nodes = editor.selectedLeafNodes();
+        var nodes = editable.selectedLeafNodes();
 
         if(nodes.length){
-            editor.selectable.removeCarets();
-            $(editor.selectable.caret).insertAfter(nodes[nodes.length - 1].parentNode)
+            editable.selectable.removeCarets();
+            $(editable.selectable.caret).insertAfter(nodes[nodes.length - 1].parentNode)
                                       .focus();
 
             $.each(nodes, function(){
@@ -431,7 +428,7 @@ Editor.prototype = {
         }
 
         if(blocks.length > 1 || nodes.length){
-            editor.updateUndo("new");
+            editable.updateUndo("new");
         }
 
         return wasAnythingDeleted;
@@ -455,11 +452,8 @@ Editor.prototype = {
     },
     // if the caret is within the root then it is the insertion point
     insertionPoint: function(){
-        if( this.root.find('.caret').length ){
-            return this.find('.caret-start,.caret').first();
-        } else {
-            return false;
-        }
+        var caret = this.find('.caret');
+        return caret.length ? caret : false;
     },
     updateParagraphStyleMenu: function(){
         var menu = this.tools.find('select[name="paragraph-style"]'),
