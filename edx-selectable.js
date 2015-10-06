@@ -151,8 +151,12 @@
         },
         /* Synthetic event triggered by selection change */
         selectionChanged: function(){
-            this.find('.caret').focus();
+            this.focus();
             this.root.trigger('selectionchanged');
+            return this;
+        },
+        focus: function(){
+            this.find('.caret').focus();
             return this;
         },
         selStart: '<span class="sel-start"></span>',
@@ -170,7 +174,7 @@
                 nodes = sel.find('.selected');
             sel.removeBounds();
             $(sel.selStart).insertBefore(nodes.first().firstLeafNode());
-            $(sel.selEnd).insertBefore(nodes.last().firstLeafNode());
+            $(sel.selEnd).insertAfter(nodes.last().lastLeafNode());
             return this;
         },
         removeBounds: function(){

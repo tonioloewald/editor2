@@ -105,7 +105,8 @@ Editable.prototype = {
         editable.focus();
     },
     focus: function(){
-        this.find('input.caret').focus();
+        this.selectable.focus();
+        return this;
     },
     commands: {
         // TODO implement list and table support
@@ -138,6 +139,7 @@ Editable.prototype = {
                     $(this).wrap(styledSpan);
                 }
             });
+            editable.selectable.markBounds().focus();
             editable.updateUndo("new");
         },
         updateUndo: function(command){
