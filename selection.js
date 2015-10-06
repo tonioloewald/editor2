@@ -257,17 +257,13 @@
             // Mark selected leaf nodes
             if(first.is('.sel-start,.sel-end')){
                 first = first.nextLeafNode();
-            } else if(sel.isBlock(first)){
-                first = first.firstLeafNode();
             } else {
-                first = first.previousLeafNode();
+                first = first.firstLeafNode();
             }
             if(last.is('.sel-start,.sel-end')){
                 last = last.previousLeafNode();
-            } else if(sel.isBlock(last)){
-                last = last.lastLeafNode();
             } else {
-                last = last.nextLeafNode();
+                last = last.lastLeafNode();
             }
             var nodes = blocks.leafNodes();
             sel.markNode(first);
