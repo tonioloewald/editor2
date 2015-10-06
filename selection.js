@@ -153,8 +153,21 @@
         },
         selStart: '<span class="sel-start"></span>',
         selEnd: '<input class="sel-end caret">',
+        markBounds: function(){
+            this.markRange(this.find('.sel-start'), this.find('.sel-end'));
+            return this;
+        },
         bounds: function(){
             return $(this.selStart + this.selEnd);
+        },
+        // make the bounds match the current selection
+        resetBounds: function(){
+            var sel = this,
+                nodes = sel.find('.selected');
+            sel.removeBounds();
+            $(sel.selStart).insertBefore(nodes.first().firstLeafNode());
+            $(sel.selEnd).insertBefore(nodes.last().firstLeafNode());
+            return this;
         },
         removeBounds: function(){
             this.find('.sel-start,.sel-end').remove();

@@ -126,8 +126,8 @@ Editable.prototype = {
                 nodes,
                 styledSpan = $('<span>').css(attribute, setting);
 
-            editable.selectable.unmark().root.spanify(false);
-            editable.selectable.normalize().mark();
+            editable.selectable.resetBounds().root.spanify(false);
+            editable.selectable.normalize().markBounds();
             nodes = editable.selectedLeafNodes();
             $.each(nodes, function(){
                 if(this.nodeType === 3 && this.parentNode.childNodes.length === 1){
