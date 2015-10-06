@@ -77,6 +77,10 @@
             sel.root.on('mousemove.selectable', '*', sel, sel.mousemove)
                     .on('mousedown.selectable', '*', sel, sel.mousedown)
                     .on('mouseup.selectable', '*', sel, sel.mouseup);
+            // diagnostic for focus bugs
+            sel.root.on('blur.selectable', 'input', sel, function(){
+                        console.warn('caret lost focus');
+                    });
         },
         mousemove: function(evt){
             var sel = evt.data,

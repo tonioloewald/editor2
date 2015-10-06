@@ -90,7 +90,7 @@ Editable.prototype = {
                     break;
             }
         });
-        editable.root.append($('<p>').append(editable.selectable.caret));
+        editable.root.append($('<p>').append(editable.selectable.bounds()));
         editable.normalize();
 
         if(editable.options.tools){
@@ -99,11 +99,13 @@ Editable.prototype = {
         }
         editable.root.on('selectionchanged.editable', function(evt){
             editable.updateUndo('new', 'selectionchanged');
-            editable.find('input.caret').focus();
         });
         editable.updateUndo("init");
         editable.undoDepth = 0;
-        editable.find('.caret').focus();
+        editable.focus();
+    },
+    focus: function(){
+        this.find('input.caret').focus();
     },
     commands: {
         // TODO implement list and table support
@@ -204,7 +206,7 @@ Editable.prototype = {
                     && deletionBlock[0] !== caretBlock[0]
                 ){
                     caretBlock.detach().contents().appendTo(deletionBlock);
-                    editable.find('.caret').focus();
+                    // editable.focus();
                 }
                 editable.updateUndo();
             }
@@ -228,7 +230,8 @@ Editable.prototype = {
     splitAtCaret: function(){
         var editable = this;
         if(editable.insertionPoint()){
-            var block = editable.block(editable.find('.caret')),
+            // Should we check the selection is empty?
+            var block = editable.block(editable.find('input.caret')),
                 beforeBlock = block.clone(),
                 nodes = block.leafNodes(),
                 beforeNodes = beforeBlock.leafNodes(),
@@ -242,7 +245,13 @@ Editable.prototype = {
                     node = beforeNodes[idx];
                     inBeforeBlock = true;
                 }
-                while(node.parentNode.childNodes.length === 1){
+                // move up the chain of nodes that will be empty
+                // note that we cannot be starting inside a singleton tag (e.g. input)
+                while(
+                    node.parentNode.parentNode
+                    && node.parentNode.parentNode !== editable.root[0]
+                    && node.parentNode.childNodes.length === 1
+                ){
                     node = node.parentNode;
                 }
                 $(node).remove();
@@ -251,32 +260,6 @@ Editable.prototype = {
             editable.selectable.unmark();
             return true;
         }
-    },
-    mergeBackAtCaret: function(){
-        var editable = this,
-            block = editable.block(editable.caret);
-        if(previousTextNode(editable.caret[0], block[0], true) === false){
-            // at the beginning of a paragraph; merge with previous
-            if(block[0].previousSibling){
-                block.prev().append(editable.caret).append(block.contents());
-                block.remove();
-                return true;
-            }
-        }
-        return false;
-    },
-    mergeForwardAtCaret: function(){
-        var editable = this,
-            block = editable.block(editable.caret);
-        if(nextTextNode(editable.caret[0], block[0], true) === false) {
-            // at the end of a paragraph; merge with next
-            if(block[0].nextSibling){
-                block.next().contents().insertAfter(editable.caret);
-                block.remove();
-                return true;
-            }
-        }
-        return false;
     },
     keydown: function(evt){
         if($(evt.target).is('.not-editable')){
@@ -348,7 +331,7 @@ Editable.prototype = {
                 if(editable.undoDepth < editable.undo.length - 1){
                     editable.undoDepth += 1;
                     editable.root.html(editable.undo[this.undoDepth]);
-                    editable.find('.caret').focus();
+                    editable.focus();
                     console.log('undo', editable.undoDepth);
                 }
                 break;
@@ -356,7 +339,7 @@ Editable.prototype = {
                 if(editable.undoDepth > 0){
                     editable.undoDepth -= 1;
                     editable.root.html(editable.undo[this.undoDepth]);
-                    editable.find('.caret').focus();
+                    editable.focus();
                     console.log('redo', editable.undoDepth);
                 }
                 break;
@@ -375,6 +358,7 @@ Editable.prototype = {
                     .prop('disabled', editable.undoDepth >= editable.undo.length - 1);
         editable.tools.find('[value="updateUndo redo"]')
                     .prop('disabled', editable.undoDepth === 0);
+        return this;
     },
     shortcut: function(evt){
         console.log('shortcut', evt);
@@ -397,6 +381,7 @@ Editable.prototype = {
     },
     // scrupulously deletes all selected leaf nodes (and parent nodes left empty)
     // and merges the first and last blocks if the selection spanned multiple blocks
+    // returns true if something was deleted
     deleteSelection: function(){
         var editable = this,
             blocks = editable.selectedBlocks(),
@@ -407,7 +392,6 @@ Editable.prototype = {
         var nodes = editable.selectedLeafNodes();
 
         if(nodes.length){
-            editable.selectable.selectionChanged();
             $.each(nodes, function(){
                 var node = this;
                 while(node.parentNode.childNodes.length === 1){
@@ -418,15 +402,14 @@ Editable.prototype = {
             wasAnythingDeleted = true;
         }
 
-        // merge paragraphs
         if(blocks.length > 1){
+            // merge paragraphs
             blocks.first().detach().contents().prependTo(blocks.last());
-            wasAnythingDeleted = true;
+            editable.updateUndo("new").selectable.selectionChanged();
+        } else if (wasAnythingDeleted){
+            editable.updateUndo().selectable.selectionChanged();
         }
 
-        if(blocks.length > 1 || nodes.length){
-            editable.updateUndo("new");
-        }
 
         return wasAnythingDeleted;
     },
@@ -449,7 +432,7 @@ Editable.prototype = {
     },
     // if the caret is within the root then it is the insertion point
     insertionPoint: function(){
-        var caret = this.find('.caret');
+        var caret = this.find('input.caret');
         return caret.length ? caret : false;
     },
     updateParagraphStyleMenu: function(){
