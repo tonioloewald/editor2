@@ -1,8 +1,8 @@
-# Working non-whitespace
+# Working Notes
 
 ## Known Issues
 
-* Double-click on whitespace does not work properly in selectable
+* Double-click on whitespace does not work properly in selectable **FIXED**
 
 ## To Do
 
