@@ -149,6 +149,7 @@
         selectionChanged: function(){
             this.find('.caret').focus();
             this.root.trigger('selectionchanged');
+            return this;
         },
         selStart: '<span class="sel-start"></span>',
         selEnd: '<input class="sel-end caret">',
@@ -157,6 +158,7 @@
         },
         removeBounds: function(){
             this.find('.sel-start,.sel-end').remove();
+            return this;
         },
         extendSelection: function(){
             var sel = this,

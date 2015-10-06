@@ -143,15 +143,7 @@ function leafNodes(node, filter){
         $.each(node, function(){
             nodeList = nodeList.concat(leafNodes(this));
         });
-    } else if(
-        !node.firstChild
-        && (!node.classList
-            || (
-                !node.classList.contains('sel-start')
-                && !node.classList.contains('sel-end')
-            )
-        )
-    ){
+    } else if(!node.firstChild){
         // leaf node (e.g. text or <hr>
         nodeList.push(node);
     } else {

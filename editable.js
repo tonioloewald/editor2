@@ -248,7 +248,7 @@ Editable.prototype = {
                 $(node).remove();
             });
             beforeBlock.insertBefore(block);
-            editable.selectable.mark();
+            editable.selectable.unmark();
             return true;
         }
     },
