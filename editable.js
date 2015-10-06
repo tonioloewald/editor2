@@ -19,7 +19,6 @@ function Editable(elt, options){
         elt.makeSelectable();
     }
     this.selectable = elt.data().selectable;
-    this.selectable.caret = '<input class="caret">';
     this.options = $.extend({}, options);
 
     var defaults = {
@@ -100,6 +99,7 @@ Editable.prototype = {
         }
         editable.root.on('selectionchanged.editable', function(evt){
             editable.updateUndo('new', 'selectionchanged');
+            editable.find('input.caret').focus();
         });
         editable.updateUndo("init");
         editable.undoDepth = 0;
@@ -407,10 +407,7 @@ Editable.prototype = {
         var nodes = editable.selectedLeafNodes();
 
         if(nodes.length){
-            editable.selectable.removeCarets();
-            $(editable.selectable.caret).insertAfter(nodes[nodes.length - 1].parentNode)
-                                      .focus();
-
+            editable.selectable.selectionChanged();
             $.each(nodes, function(){
                 var node = this;
                 while(node.parentNode.childNodes.length === 1){

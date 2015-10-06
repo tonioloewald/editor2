@@ -117,7 +117,7 @@
                     sel.extendSelection();
                 } else if(sel.selecting === 1){
                     // begin selection
-                    sel.find('.sel-start,.sel-end').remove();
+                    sel.removeBounds();
                     sel.selecting = 1;
                     if((evt.clientX - elt.offset().left) < elt.width() / 2){
                         sel.bounds().insertBefore(elt);
@@ -147,13 +147,16 @@
         },
         /* Synthetic event triggered by selection change */
         selectionChanged: function(){
+            this.find('.caret').focus();
             this.root.trigger('selectionchanged');
         },
-        caret: '<span class="caret"></span>',
         selStart: '<span class="sel-start"></span>',
-        selEnd: '<span class="sel-end"></span>',
+        selEnd: '<input class="sel-end caret">',
         bounds: function(){
             return $(this.selStart + this.selEnd);
+        },
+        removeBounds: function(){
+            this.find('.sel-start,.sel-end').remove();
         },
         extendSelection: function(){
             var sel = this,
