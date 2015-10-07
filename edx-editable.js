@@ -5,11 +5,13 @@
 
     ## Usage
 
-    // create an editable element
-    $(selector).makeEditable(options_object);
+    Create an editable element:
 
-    // retrieve reference to editor object
-    var editable = $(selector).data().editable;
+        $(selector).makeEditable(options_object);
+
+    Retrieve reference to editor object:
+
+        var editable = $(selector).data().editable;
 
     ## Tools
 
@@ -18,12 +20,13 @@
     to automatically manage tools for you then you can pass tool containers
     to the editor:
 
-    $(selector).makeEditable({tools: '.toolbar'});
+        $(selector).makeEditable({tools: '.toolbar'});
 
     Example tools:
 
     <pre>
         <button data-shortcut="ctrl+b" value="setText font-weight bold"><b>B</b></button>
+        <button data-shortcut="ctrl+b" value="setText vertical-align super font-size 70%"><b>B</b></button>
     </pre>
 
     data-shortcut lets you provide one or more keyboard shortcuts for a command.
@@ -33,11 +36,11 @@
 
     ## Commands
 
-    setText css-property value // styles selected characters
-    setBlocks css-property value // styles selected blocks
-    updateUndo undo|redo
-    setBlockType h1|h2|p|...
-    annotate annotationClass // annotates with a clone of .annotation-template .annotationClass
+    * setText css-property value { property value ... } // styles selected characters
+    * setBlocks css-property value // styles selected blocks
+    * updateUndo undo|redo
+    * setBlockType h1|h2|p|...
+    * annotate annotationClass // annotates with a clone of .annotation-template .annotationClass
 
     ## Annotations
 
@@ -45,6 +48,7 @@
     Any other behavior should be implemented via standard event listeners, etc., ideally
     at the editor's root level.
 */
+
 /*global jQuery*/
 /*jshint laxbreak: true */
 
@@ -130,6 +134,19 @@ function Editable(elt, options){
     this.setup();
 
     return this;
+}
+
+function makeCSS(args){
+    var css = {};
+    if(args.length % 2 === 0){
+        for(var i = 0; i < args.length; i+= 2){
+            css[args[i]] = args[i+1].replace(/\+/g, ' ');
+        }
+    } else {
+        console.error('Error: expected even number of arguments', args);
+        css = null;
+    }
+    return css;
 }
 
 Editable.prototype = {
@@ -218,23 +235,18 @@ Editable.prototype = {
                 $(this).replaceWith(newBlock);
             });
         },
-        setBlocks: function(attribute, setting){
-            this.selectedBlocks().css(attribute, setting);
+        setBlocks: function(){
+            var css = makeCSS(arguments);
+            if(css){
+                this.selectedBlocks().css(css);
+            }
         },
         setText: function(){
             var editable = this,
                 nodes,
-                css = {},
-                styledSpan;
-
-            if(arguments.length % 2 === 0){
-                for(var i = 0; i < arguments.length; i+= 2){
-                    css[arguments[i]] = arguments[i+1].replace(/\+/g, ' ');
-                }
+                css = makeCSS(arguments),
                 styledSpan = $('<span>').addClass('setText');
-            } else {
-                console.error('setText expects even number of arguments');
-            }
+
             // we don't want to wrap every letter so we despan
             editable.selectable.resetBounds().root.spanify(false);
             editable.selectable.markBounds().normalize();

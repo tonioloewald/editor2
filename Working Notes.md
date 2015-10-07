@@ -21,10 +21,10 @@
 * copy
 * paste
 * More core functionality
-    * local editor-base, e.g. td, th, li
-    * ul, ol
+    * local editor-base, e.g. TD, TH, LI
+    * UL, OL
     * tables
-    * correct behavior when you hit TAB or RETURN in a TR
+    * correct behavior when you hit TAB or RETURN in a TR, TD
 * Tools
     * shortcuts
     * active-for-selection for both character and paragraph commands
@@ -32,7 +32,7 @@
 * font-size menu **DONE**
 * font menu **DONE**
 * hilite **DONE**
-* subscript, superscript
+* subscript, superscript **DONE**
 * line-height **DONE**
 * annotations **DONE**
     * missing fields
