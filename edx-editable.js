@@ -60,6 +60,7 @@ function deletableFilter(node){
     return node.nodeType !== 3 || node.textContent !== '';
 }
 
+// makes a filter function from an arbitrary input
 function makeFilter(filter){
     var fn;
     if(typeof filter === 'function'){
@@ -72,6 +73,16 @@ function makeFilter(filter){
     return fn;
 }
 
+/*
+    Single parents
+
+    It's all about single parents!
+
+    walk up the chain of filtered parents with only one child
+    note that selection bounds can confuse this!
+
+    TODO don't go through TD or LI elements
+*/
 function topSingleParentAncestor(node, filter){
     filter = makeFilter(filter);
     while(
@@ -85,6 +96,7 @@ function topSingleParentAncestor(node, filter){
     return node;
 }
 
+// walk up the chain of parents until one satisfies the filter
 function closestSingleParentAncestor(node, filter){
     filter = makeFilter(filter);
     node = node.parentNode;
@@ -223,12 +235,17 @@ Editable.prototype = {
             } else {
                 console.error('setText expects even number of arguments');
             }
+            // we don't want to wrap every letter so we despan
             editable.selectable.resetBounds().root.spanify(false);
             editable.selectable.markBounds().normalize();
+            // now we grab the selected text
             nodes = editable.selectedLeafNodes();
+            // and remove the bounds because they ruin the single parent chains
             editable.selectable.removeBounds();
             $.each(nodes, function(){
+                // we only want to style text, not image nodes etc.
                 if(this.nodeType === 3) {
+                    // if possible we want to modify existing setText spans
                     var node = closestSingleParentAncestor(this, '.setText');
                     if(node){
                         $(node).css(css);
@@ -237,7 +254,9 @@ Editable.prototype = {
                     }
                 }
             });
+            // our selection is still good, so we just need to restore selection
             editable.selectable.resetBounds().focus();
+            // and focus
             editable.updateUndo("new");
         },
         updateUndo: function(command){
