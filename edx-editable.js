@@ -9,16 +9,25 @@
 
         $(selector).makeEditable(options_object);
 
-    Retrieve reference to editor object:
+    Retrieve reference to Editable object:
 
         var editable = $(selector).data().editable;
+
+    ## Options
+
+    {
+        tools: tool-container-node OR jQuery-bag-of-nodes
+    }
+
+    The options object will be (shallow) cloned and stored in editable.options.
+    Use editable.options to store state.
 
     ## Tools
 
     You can create tools for the editable very easily using
-    the editor's doCommand() method. But if you want the editor
+    the editable's doCommand() method. But if you want the editable
     to automatically manage tools for you then you can pass tool containers
-    to the editor:
+    to the editable:
 
         $(selector).makeEditable({tools: '.toolbar'});
 
@@ -29,8 +38,10 @@
         <button data-shortcut="ctrl+b" value="setText vertical-align super font-size 70%"><b>B</b></button>
     </pre>
 
+    You can even chain multiple commands in a tool by separating them with a semicolon.
+
     data-shortcut lets you provide one or more keyboard shortcuts for a command.
-    value is the command that is passed to the editor.
+    value is the command that is passed to the editable.
 
     A tool can have multiple commands (separated by semicolons).
 
@@ -46,7 +57,63 @@
 
     INPUT and TEXTAREA elements within an annotation are automatically serialized.
     Any other behavior should be implemented via standard event listeners, etc., ideally
-    at the editor's root level.
+    at the editable's root level.
+
+    ## How Editable Works
+
+    The real question is how does Selectable work (see Selectable's documentation).
+
+    Editable essentially responds to events and has very good information about
+    the user selection thanks to selectable, and nice tools for manipulating the
+    text nodes thanks to the shared utilities.
+
+    One key concept is **single parent chains**. A single parent chain is the set
+    of parents of a (text) node that have only one child. When a text node is
+    deleted you kill its single parent chain.
+
+    **Complications** arise when, for example, the selection bounds are in
+    the chain, so when performing operations on the DOM hierarchy you may want
+    to remove the bounds (editable.selectable.removeBounds()), do your thing,
+    and then restore them (editable.selectable.resetBounds()).
+
+    More complications can/will arise when you're dealing with tables and lists
+    which have DOM structures that do not respond well to editing part-way in
+    their hierarchies. THe key there is not to treat certain elements (TH, TD,
+    OL, and UL for example) as single parents. (Not implemented yet.) Then you
+    can handle events in those nodes as you see fit (e.g. cloning the current
+    line if the user hits enter in a table row or list item, and cleanly deleting
+    a table row if all its cells are cleared)).
+
+    Another thing to note is the use of an input for the .sel-end selection
+    bound. This is used to trick mobile browsers into disclosing their keyboards,
+    and has the adventage of being a natural focus target. While the editable
+    is active its input should have focus -- but it does not grab focus ruthlessly
+    as this could result in stealing focus in undesired ways.
+
+    ## Accessibility
+
+    Because the input of editable is in fact a focused vanilla input field
+    it should be easy to make accessible. Whatever you want the document to
+    "look like" to a screen reader comes down to setting the properties of
+    editable.find('.caret').
+
+    ## Extending Editable
+
+    Editable is intended to be extensible very easily. The simplest kind of
+    "extension" is creating custom tools that use existing commands such
+    as setText and setBlockType.
+
+    If you want to add your own commands, simply extend your instance's commands
+    array. (You can also hack the prototype of course, although right now
+    Editable isn't exposed for such modification (but it would be easy enough).
+
+    Finally, you can simply stick event handlers on the editable.root (putting
+    them on elements inside is likely to result in losing them, unless you
+    actively maintain them.
+
+    Right now, Editable does not offer a mechanism to get in before one of
+    its event handlers (such as onWillHandleMouseDown). It would be easy to
+    add something like this should it be necessary.
 */
 
 /*global jQuery*/

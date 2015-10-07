@@ -5,6 +5,42 @@
     Selections are marked with *selected* class
     When the user clicks, span.sel-start marks the spot where the mousedown
     occurred, and span.sel-end marks where the selection ended.
+
+    ## How it Works
+
+    Selectable is a result of trying to figure out how to deal with accessibility
+    issues and editing on a mobile website (which currently sucks). While
+    considering this problem at length I had the revelation that I could figure
+    out where every character was on the screen by "spanifying" the text
+    nodes in the DOM -- i.e. wrapping a spam around ever single character (if
+    necessary). Experimentats quickly showed this was performant.
+
+    In essence, when the user "enters" a child of the selectable it spanifies
+    the child and then tracks entry into each span to figure out exactly where
+    the selection start/end should go. It places a .sel-start element at the
+    initial selection point and a .sel-end element at the end.
+
+    ## Mobile Implementation
+
+    My plan for mobile implementation is to track the user's touch and move
+    the selection bounds as though the touch position is about 60px above
+    that touch position (creating visual affordances).
+
+    If the user touches the selectable then it inserts and moves the selection-start
+    until the user releases (unlike with a mouse -- the selection start moves
+    rather than being extended -- unless/until the user is using a "force touch")
+
+    Once the user releases selectable would create an affordance showing the
+    beginning and end of the selection and a "grabbable" object at the insertion point
+    (I'm thinking a visibly grippy circle below it). The user can extend the
+    selection by dragging this affordance OR start a new selection by touching
+    somewhere else.
+
+    I believe this will be a much better text-selection experience than is
+    offered on any mobile platform natively.
+
+    Finally -- because the insertion-point (.caret) is an input field, a mobile
+    browser should be "fooled" into providing a keyboard.
 */
 /*jshint laxbreak: true */
 
