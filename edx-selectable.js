@@ -215,9 +215,14 @@
             return this.root.find(selector);
         },
         unmark: function(){
-            this.find('.selected').removeClass('selected');
-            this.find('span.unwrap').each(function(){
-                if(this.classList.length === 1 && this.attributes.length === 1){
+            this.find('.selected').removeClass('selected').each(function(){
+                // annoyingly jQuery leaves an empty class attribute behind
+                if(this.classList.length === 0 && this.getAttribute('class') !== null){
+                    this.removeAttribute('class');
+                }
+            });
+            this.find('span').each(function(){
+                if(this.attributes.length === 0){
                     $(this).contents().unwrap();
                 }
             });
@@ -293,7 +298,7 @@
                     // text node that is an only child
                     $(node.parentNode).addClass('selected');
                 } else {
-                    $(node).wrap($('<span>').addClass('selected unwrap'));
+                    $(node).wrap($('<span>').addClass('selected'));
                 }
             } else {
                 // style-able node (e.g. <img>, <hr>)

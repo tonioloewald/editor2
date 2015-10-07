@@ -60,10 +60,20 @@ function deletableFilter(node){
     return node.nodeType !== 3 || node.textContent !== '';
 }
 
-function topSingleParentAncestor(node, filter){
-    if(filter === undefined){
-        filter = function(){ return true; };
+function makeFilter(filter){
+    var fn;
+    if(typeof filter === 'function'){
+        fn = filter;
+    } else if (typeof filter === 'string'){
+        fn = function(node){ return $(node).is(filter); };
+    } else {
+        fn = function(){ return true; };
     }
+    return fn;
+}
+
+function topSingleParentAncestor(node, filter){
+    filter = makeFilter(filter);
     while(
         node.parentNode
         && node.parentNode.childNodes.length === 1
@@ -73,6 +83,19 @@ function topSingleParentAncestor(node, filter){
     }
 
     return node;
+}
+
+function closestSingleParentAncestor(node, filter){
+    filter = makeFilter(filter);
+    node = node.parentNode;
+    while(
+        !filter(node)
+        && node.parentNode
+        && node.parentNode.childNodes.length === 1
+    ){
+        node = node.parentNode;
+    }
+    return filter(node) ? node : null;
 }
 
 function Editable(elt, options){
@@ -186,25 +209,35 @@ Editable.prototype = {
         setBlocks: function(attribute, setting){
             this.selectedBlocks().css(attribute, setting);
         },
-        setText: function(attribute, setting){
+        setText: function(){
             var editable = this,
                 nodes,
-                styledSpan = $('<span>').css(attribute, setting);
+                css = {},
+                styledSpan;
 
+            if(arguments.length % 2 === 0){
+                for(var i = 0; i < arguments.length; i+= 2){
+                    css[arguments[i]] = arguments[i+1].replace(/\+/g, ' ');
+                }
+                styledSpan = $('<span>').addClass('setText');
+            } else {
+                console.error('setText expects even number of arguments');
+            }
             editable.selectable.resetBounds().root.spanify(false);
-            editable.selectable.normalize().markBounds();
+            editable.selectable.markBounds().normalize();
             nodes = editable.selectedLeafNodes();
+            editable.selectable.removeBounds();
             $.each(nodes, function(){
-                // TODO utility method for finding highest singleton
-                if($(this).parent().css(attribute) !== setting){
-                    if(this.nodeType === 3 && this.parentNode.childNodes.length === 1){
-                        $(this.parentNode).css(attribute, setting);
-                    } else if(this.nodeType === 3) {
-                        $(this).wrap(styledSpan);
+                if(this.nodeType === 3) {
+                    var node = closestSingleParentAncestor(this, '.setText');
+                    if(node){
+                        $(node).css(css);
+                    } else {
+                        $(this).wrap(styledSpan.css(css));
                     }
                 }
             });
-            editable.selectable.markBounds().focus();
+            editable.selectable.resetBounds().focus();
             editable.updateUndo("new");
         },
         updateUndo: function(command){
