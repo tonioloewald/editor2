@@ -11,6 +11,9 @@
 * test serialization, especially of annotations
     * serialize checkboxes, radio buttons
 * Low level keyboard behavior
+    * Delete **DONE**
+    * Forward Delete
+    * Return **DONE**
     * Arrow keys
         * left/right
         * up/down
@@ -18,8 +21,8 @@
     * Home / End
     * Option-arrows for faster cursor movement
 * plugin architecture **DONE** (extend editavle.prototype.commands)
-* copy
-* paste
+* copy *reuse code from editor.js*
+* paste *reuse code from editor.js*
 * More core functionality
     * local editor-base, e.g. TD, TH, LI
     * UL, OL
@@ -40,8 +43,8 @@
     * comments (required)
     * reminders
 * track changes
-* zoom view
-* indent / outdent
+* zoom view *reuse code from editor.js*
+* indent / outdent **DONE**
 * drag-and-drop
 * insert form paragraph
 * link editor
