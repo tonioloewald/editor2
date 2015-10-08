@@ -42,6 +42,7 @@
     Finally -- because the insertion-point (.caret) is an input field, a mobile
     browser should be "fooled" into providing a keyboard.
 */
+
 /*jshint laxbreak: true */
 
 (function($){
