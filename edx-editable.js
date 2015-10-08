@@ -546,48 +546,104 @@ Editable.prototype = {
     // TODO
     forwardDelete: function(){
     },
+    moveBoundsBefore: function(target, extendSelection){
+        if(!target){
+            return;
+        }
+        var editable = this,
+            start = editable.find('.sel-start'),
+            end = editable.find('.sel-end');
+        target = $(target)[0];
+        if(target.data.length > 1){
+            target.splitText(target.data.length - 1);
+        }
+        start.insertBefore(target);
+        if(!extendSelection){
+            end.insertAfter(start);
+        }
+        editable.selectable.markBounds();
+        editable.focus();
+    },
+    moveBoundsAfter: function(target, extendSelection){
+        if(!target){
+            return;
+        }
+        var editable = this,
+            start = editable.find('.sel-start'),
+            end = editable.find('.sel-end');
+        target = $(target)[0];
+        if(target.data.length > 1){
+            target.splitText(1);
+        }
+        end.insertAfter(target);
+        if(!extendSelection){
+            start.insertBefore(end);
+        }
+        editable.selectable.markBounds();
+        editable.focus();
+    },
     arrowLeft: function(evt){
         var editable = this,
+            start = editable.find('.sel-start'),
             previous;
 
         if(evt.altKey){
-            previous = editable.find('.sel-start').previousLeafNode(editable.root, whitespaceFilter);
+            previous = start.previousLeafNode(editable.root, whitespaceFilter);
         } else {
-            previous = editable.find('.sel-start').previousLeafNode(editable.root, deletableFilter);
+            previous = start.previousLeafNode(editable.root, deletableFilter);
         }
-        previous = previous[0];
-        if(previous.data.length > 1){
-            previous.splitText(previous.data.length - 1);
-        }
-        editable.find('.sel-start').insertBefore(previous);
-        if(!evt.shiftKey){
-            editable.find('.sel-end').insertAfter(editable.find('.sel-start'));
-        }
-        editable.selectable.markBounds();
-        editable.focus();
+        editable.moveBoundsBefore(previous, evt.shiftKey);
     },
     arrowRight: function(evt){
         var editable = this,
+            end = editable.find('.sel-end'),
             next;
         if(evt.altKey){
-            next = editable.find('.sel-end').nextLeafNode(editable.root, whitespaceFilter);
+            next = end.nextLeafNode(editable.root, whitespaceFilter);
         } else {
-            next = editable.find('.sel-end').nextLeafNode(editable.root, deletableFilter);
+            next = end.nextLeafNode(editable.root, deletableFilter);
         }
-        next = next[0];
-        if(next.data.length > 1){
-            next.splitText(1);
-        }
-        editable.find('.sel-end').insertAfter(next);
-        if(!evt.shiftKey){
-            editable.find('.sel-start').insertBefore(editable.find('.sel-end'));
-        }
-        editable.selectable.markBounds();
-        editable.focus();
+        editable.moveBoundsAfter(next, evt.shiftKey);
     },
     arrowUp: function(evt){
+        var editable = this,
+            start = editable.find('.sel-start'),
+            x = start.offset().left,
+            y = start.previousLeafNode().parent().offset().top,
+            previous;
+        if(evt.which === editable.lastKey){
+            x = editable.lastCursorX;
+        } else {
+            editable.lastCursorX = x;
+        }
+        // need to spanify previous block with text in it.
+        editable.block(start).spanify(true).prev().spanify(true);
+        previous = start.previousLeafNode(this.root, function(node){
+            var parent = node.parent(),
+                offset = parent.offset();
+            return node[0].nodeType === 3 && offset.top < y - 4 && offset.left + parent.width()/2 < x;
+        });
+        editable.moveBoundsAfter(previous, evt.shiftKey);
     },
     arrowDown: function(evt){
+        var editable = this,
+            end = editable.find('.sel-end'),
+            x = end.offset().left,
+            y = end.nextLeafNode().parent().offset().top,
+            next;
+        if(evt.which === editable.lastKey){
+            x = editable.lastCursorX;
+        } else {
+            editable.lastCursorX = x;
+        }
+        // need to spanify next block with text in it.
+        editable.block(end).spanify(true).next().spanify(true);
+        next = end.nextLeafNode(this.root, function(node){
+            var parent = node.parent(),
+                offset = parent.offset();
+            return node[0].nodeType === 3 && offset.top > y + 4 && offset.left - parent.width()/2 > x;
+        });
+        editable.moveBoundsBefore(next, evt.shiftKey);
     },
     home: function(){
     },
@@ -625,7 +681,6 @@ Editable.prototype = {
         }
     },
     keydown: function(evt){
-        evt.data.lastKey = evt.which;
         if($(evt.target).is('.not-editable') || !evt.data.active){
             return;
         }
@@ -657,6 +712,7 @@ Editable.prototype = {
                 editable.arrowDown(evt);
                 break;
         }
+        evt.data.lastKey = evt.which;
     },
     keypress: function(evt){
         // console.log('keypress', evt);
