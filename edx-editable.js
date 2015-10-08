@@ -155,8 +155,19 @@ $.fn.makeEditable = function(options){
 };
 
 function deletableFilter(node){
+    node = $(node)[0];
     return !$(node).is('.sel-start,.sel-end')
            && (node.nodeType !== 3 || node.textContent !== '');
+}
+
+function whitespaceFilter(node){
+    node = $(node)[0];
+    return node.nodeType === 3 && node.data.match(/\s/);
+}
+
+function textFilter(node){
+    node = $(node)[0];
+    return node.nodeType === 3 && node.data.match(/\w/);
 }
 
 // makes a filter function from an arbitrary input
@@ -515,7 +526,6 @@ Editable.prototype = {
                 deletionBlock = editable.block(node);
                 node = node[0];
                 // TODO track deletion
-                // TODO merge paragraphs
                 if(node.nodeType === 3 && node.length > 1){
                     node.data = node.data.substr(0, node.length - 1);
                 } else {
@@ -538,7 +548,13 @@ Editable.prototype = {
     },
     arrowLeft: function(evt){
         var editable = this,
+            previous;
+
+        if(evt.altKey){
+            previous = editable.find('.sel-start').previousLeafNode(editable.root, whitespaceFilter);
+        } else {
             previous = editable.find('.sel-start').previousLeafNode(editable.root, deletableFilter);
+        }
         previous = previous[0];
         if(previous.data.length > 1){
             previous.splitText(previous.data.length - 1);
@@ -552,7 +568,12 @@ Editable.prototype = {
     },
     arrowRight: function(evt){
         var editable = this,
+            next;
+        if(evt.altKey){
+            next = editable.find('.sel-end').nextLeafNode(editable.root, whitespaceFilter);
+        } else {
             next = editable.find('.sel-end').nextLeafNode(editable.root, deletableFilter);
+        }
         next = next[0];
         if(next.data.length > 1){
             next.splitText(1);

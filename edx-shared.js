@@ -119,7 +119,7 @@ $.fn.nextLeafNode = function(base, filter){
     if(node && node.nextSibling){
         next = $(node.nextSibling).firstLeafNode();
     } else if (node && node.parentNode !== (base || document.body)){
-        next = $(node.parentNode).nextLeafNode();
+        next = $(node.parentNode).nextLeafNode(base, filter);
     }
     if(next === null){
         return next;
@@ -140,7 +140,7 @@ $.fn.previousLeafNode = function(base, filter){
     if(node && node.previousSibling){
         previous = $(node.previousSibling).lastLeafNode();
     } else if (node && node.parentNode !== (base || document.body)){
-        previous = $(node.parentNode).previousLeafNode();
+        previous = $(node.parentNode).previousLeafNode(base, filter);
     }
     if(node === null){
         return node;
