@@ -41,6 +41,29 @@
 
     Finally -- because the insertion-point (.caret) is an input field, a mobile
     browser should be "fooled" into providing a keyboard.
+
+    ## Alternative Implementation of Selectable
+
+    *Break glass in case of performance issues!*
+
+    It occurs to me that there's another way selectable could be implemented, but
+    it wouldn't work for mobile. Assuming you don't care about mobile or assume
+    that some day mobile browsers won't suck for editing text, you could replace
+    the code that figures out where to put the .selStart and .selEnd.caret nodes
+    by simply allowing browser selection and then immediately after the selection
+    is completed, insert the bounds and mark the selection.
+
+    To do this you'd simply allow selection but as soon as there is a selection
+    simply place the bounds elements on the start and end points and then
+    calculate the selection yourself.
+
+    This approach will eliminate the use of spanify (the function that wraps
+    every letter in a paragraph in its own span, which is at the heart of
+    Selectable) but still gives you full control over what gets selected.
+
+    The downside of this approach is the selection will look weird while the
+    user is doing it (and won't be stylable). Once it's complete you have nice
+    behavior.
 */
 
 /*jshint laxbreak: true */

@@ -67,6 +67,22 @@
     the user selection thanks to selectable, and nice tools for manipulating the
     text nodes thanks to the shared utilities.
 
+    ### Leaf Nodes
+
+    All text nodes are **leaf nodes** -- i.e. they cannot themselves have child nodes. Most
+    leaf nodes in the DOM are probably text nodes. (There are some others, e.g. IMG, INPUT,
+    and standard nodes that happen to be empty).
+
+    So a lot of operations involve finding leaf nodes, moving from one leaf node to
+    another, and so forth. Unfortunately, text nodes are essentially invisible to
+    jQuery, so there are a bunch of utility functions (jQuery plugins) in the
+    shared library for doing this stuff simply and reliably.
+
+    (I wrote some simple tests while developing them, but I haven't had time to
+    write a proper set of unit tests. See tests.html in the github repo.)
+
+    ### Single Parent Chains
+
     One key concept is **single parent chains**. A single parent chain is the set
     of parents of a (text) node that have only one child. When a text node is
     deleted you kill its single parent chain.
@@ -122,13 +138,25 @@
 (function($){
 "use strict";
 
+// private "globals"
+var blockSelector = 'h1,h2,h3,h4,h5,h6,pre,blockquote,p,div,ul,ol,th,td',
+    modifierKeys = [12,16,17,18,91,92,33,34,35,36,37,38,39,40,91,93],
+    nbsp = $("<p>&nbsp;</p>").text(),
+    // array of editors
+    editables = [],
+    active_editable = false,
+    // see editor-common.js for the control implementation
+    editableControls = {},
+    paragraph_clipboard = false;
+
 $.fn.makeEditable = function(options){
     this.data('editable', new Editable(this, options));
     return this;
 };
 
 function deletableFilter(node){
-    return node.nodeType !== 3 || node.textContent !== '';
+    return !$(node).is('.sel-start,.sel-end')
+           && (node.nodeType !== 3 || node.textContent !== '');
 }
 
 // makes a filter function from an arbitrary input
@@ -142,6 +170,84 @@ function makeFilter(filter){
         fn = function(){ return true; };
     }
     return fn;
+}
+
+/*
+    Utilities to support cut/copy/paste
+    Flattens all table content into a document fragment and returns
+    the result.
+*/
+var flattenTable = function (idx, table) {
+    var frag = document.createDocumentFragment(),
+        br = document.createElement('br'),
+        div = document.createElement('div'),
+        rows = $('tr', table),
+        row,
+        cells,
+        wrapper,
+        i,
+        j;
+
+    div.style.display = 'inline-block';
+    for (i = 0; i < rows.length; i++) {
+        row = $(rows[i]);
+        cells = row.children();
+        for (j = 0; j < cells.length; j++) {
+            wrapper = div.cloneNode();
+            wrapper.innerHTML = cells[j].innerHTML;
+            frag.appendChild(wrapper);
+        }
+        frag.appendChild(br.cloneNode());
+    }
+    return frag;
+};
+
+/**
+ * recursive helper function to apply styles to nodes.
+ */
+var mergeFormatHelper = function (nodes, css) {
+    var flatTable,
+        children,
+        table = nodes.filter('table');
+    if (table.length) {
+        flatTable = table.map(flattenTable);
+        mergeFormatHelper($(flatTable), css);
+        table.replaceWith(flatTable);
+    }
+    nodes.css(css);
+    children = nodes.children();
+    if (children.length) {
+        mergeFormatHelper(nodes.children(), css);
+    }
+};
+
+/**
+ * Takes a jquery selection and a css object and applies css properties and values
+ * to the elements in the selection recursively.
+ */
+var mergeFormat = function (nodes, css) {
+    var clone = nodes.clone(),
+        wrapper = $('<div>').append(clone);
+    mergeFormatHelper(wrapper, css);
+    return wrapper.children();
+};
+
+function selectNodeText( node ){
+    var range,
+        selection;
+
+    node = $(node).focus().get(0);
+    if (!document.createRange) { // MSIE8
+        range = document.body.createTextRange();
+        range.moveToElementText(node);
+        range.select();
+    } else if (window.getSelection) { // Others
+        range = document.createRange();
+        range.selectNodeContents(node);
+        selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
 }
 
 /*
@@ -183,11 +289,13 @@ function closestSingleParentAncestor(node, filter){
 
 function Editable(elt, options){
     this.root = $(elt);
+    this.active = true;
     if(!elt.data().selectable){
         elt.makeSelectable();
     }
     this.selectable = elt.data().selectable;
     this.options = $.extend({}, options);
+    this.pastemode = 'merge';
 
     var defaults = {
     };
@@ -238,6 +346,9 @@ Editable.prototype = {
         editable.root.attr('tabindex', 0);
         editable.root.on('keydown.editable', 'input.caret', editable, editable.keydown);
         editable.root.on('keypress.editable', 'input.caret', editable, editable.keypress);
+        editable.root.on('copy.editable', 'input.caret', editable, editable.copy);
+        editable.root.on('cut.editable', 'input.caret', editable, editable.cut);
+        editable.root.on('paste.editable', 'input.caret', editable, editable.paste);
         editable.root.on('click.annotation', '.annotation .delete', function(evt){
             var annotation = $(evt.target).closest('.annotation');
             annotation.find('.annotation-body').remove();
@@ -247,7 +358,15 @@ Editable.prototype = {
                 annotation.remove();
             }
         });
-        // persist changes to the DOM
+        // prevent browser from accidentally navigating away while user hits delete
+        $(document).on('keydown', function(evt){
+            var blockedKeys = [8];
+            if(blockedKeys.indexOf(evt.which) > -1){
+                evt.stopPropagation();
+                evt.preventDefault();
+            }
+        });
+        // persist changes to the DOM -- note that this should work embedded controls too
         editable.root.on('change.annotation', 'textarea,input,select', function(evt){
             var elt = $(evt.target),
                 value = elt.val();
@@ -417,13 +536,37 @@ Editable.prototype = {
     // TODO
     forwardDelete: function(){
     },
-    arrowLeft: function(){
+    arrowLeft: function(evt){
+        var editable = this,
+            previous = editable.find('.sel-start').previousLeafNode(editable.root, deletableFilter);
+        previous = previous[0];
+        if(previous.data.length > 1){
+            previous.splitText(previous.data.length - 1);
+        }
+        editable.find('.sel-start').insertBefore(previous);
+        if(!evt.shiftKey){
+            editable.find('.sel-end').insertAfter(editable.find('.sel-start'));
+        }
+        editable.selectable.markBounds();
+        editable.focus();
     },
-    arrowRight: function(){
+    arrowRight: function(evt){
+        var editable = this,
+            next = editable.find('.sel-end').nextLeafNode(editable.root, deletableFilter);
+        next = next[0];
+        if(next.data.length > 1){
+            next.splitText(1);
+        }
+        editable.find('.sel-end').insertAfter(next);
+        if(!evt.shiftKey){
+            editable.find('.sel-start').insertBefore(editable.find('.sel-end'));
+        }
+        editable.selectable.markBounds();
+        editable.focus();
     },
-    arrowUp: function(){
+    arrowUp: function(evt){
     },
-    arrowDown: function(){
+    arrowDown: function(evt){
     },
     home: function(){
     },
@@ -461,28 +604,46 @@ Editable.prototype = {
         }
     },
     keydown: function(evt){
-        if($(evt.target).is('.not-editable')){
+        evt.data.lastKey = evt.which;
+        if($(evt.target).is('.not-editable') || !evt.data.active){
             return;
         }
         var editable = evt.data;
         switch(evt.keyCode){
-            case 8:
+            case 8: // backspace
                 evt.preventDefault();
                 editable.backspace();
                 break;
-            case 13:
+            case 13: // enter
                 evt.preventDefault();
                 editable.deleteSelection();
                 editable.splitAtCaret();
                 break;
+            case 37: // left arrow
+                evt.preventDefault();
+                editable.arrowLeft(evt);
+                break;
+            case 38: // up arrow
+                evt.preventDefault();
+                editable.arrowUp(evt);
+                break;
+            case 39: // right arrow
+                evt.preventDefault();
+                editable.arrowRight(evt);
+                break;
+            case 40: // down arrow;
+                evt.preventDefault();
+                editable.arrowDown(evt);
+                break;
         }
     },
     keypress: function(evt){
-        if($(evt.target).is('.not-editable')){
-            return;
-        }
         // console.log('keypress', evt);
         var editable = evt.data;
+
+        if($(evt.target).is('.not-editable') || !editable.active){
+            return;
+        }
 
         // don't process shortcuts (yet!)
         if(evt.ctrlKey || evt.metaKey){
@@ -608,6 +769,24 @@ Editable.prototype = {
 
         return wasAnythingDeleted;
     },
+    selectedNodes: function(){
+        var editable = this,
+            blocks = editable.selectedBlocks().clone();
+
+        function removeUnselected(){
+            var nodes = $(this).leafNodes();
+            $.each(nodes, function(){
+                if($(this).closest('.selected').length === 0){
+                    $(topSingleParentAncestor(this)).remove();
+                }
+            });
+        }
+        blocks.first().each(removeUnselected);
+        if(blocks.length > 1){
+            blocks.last().each(removeUnselected);
+        }
+        return blocks;
+    },
     // gets the top level block containing the node
     block: function(node){
         var b = node;
@@ -646,6 +825,369 @@ Editable.prototype = {
         if(currentBlockType){
             menu.val('setBlocks ' + currentBlockType.toLowerCase());
         }
-    }
+    },
+    /* editor.js compatibility */
+    makeEditable: function(editable){
+        this.active = editable;
+    },
+    setupLinkEditor: function(root, editable){
+
+    },
+    ready: function(){
+        return true;
+    },
+    close: function(){
+        this.active = false;
+        delete(this.root.data().selectable);
+        this.root.off('*.editable');
+    },
+    createAddedSpan: function(evt, afterWhat, content){
+
+    },
+    createDeletedSpan: function(evt, selection, replacementText){
+
+    },
+    shortcuts: function(evt){
+        this.shortcut(evt);
+    },
+    updateControls: function(){
+        return this;
+    },
+    enable: function(elt, is_enabled){
+        // this should be removeProp() and prop() but they don't work?!
+        if( is_enabled ){
+            elt.removeAttr('disabled');
+        } else {
+            elt.attr('disabled', 'disabled');
+        }
+    },
+    topLevelElement: function(elt){
+        return this.block(elt);
+    },
+    selection_info: function(){
+        console.error('selection_info is deprecated; use editable.find(".selected"|".sel-start"|".sel-end")');
+    },
+    getSelectionRange: function(){
+        return this.find('.selected');
+    },
+    setSelectionRange: function(range){
+        console.error('setSelectionRange gone; use markBounds!');
+    },
+    execWrapper: function (control, cmdArg){
+        console.error('execWrapper gone; use commands directly');
+        return this;
+    },
+    exec: function(command, argument){
+        console.error('exec gone; use commands directly');
+        return this;
+    },
+    elementsStyle: function( sel, styleAttribute ){
+        var value;
+        this.normalize();
+        this.find('.selected').each(function(){
+            if(value === undefined){
+                value = $(this).css('styleAttribute');
+            } else {
+                if($(this).css('styleAttribute') !== value){
+                    value = 'mixed';
+                }
+            }
+        });
+
+        return value || 'mixed';
+    },
+    blocksStyle: function( sel, styleAttribute ){
+        var value;
+        this.selectedBlocks().each(function(){
+            if(value === undefined){
+                value = $(this).css('styleAttribute');
+            } else {
+                if($(this).css('styleAttribute') !== value){
+                    value = 'mixed';
+                }
+            }
+        });
+        return value || 'mixed';
+    },
+    insert: function(nodes, options){
+        console.warn('insert is deprecated; use normal DOM manipulation instead');
+        options = $.extend({
+                where: "insert"
+            }, options);
+        if( !nodes.length ){
+                return;
+            }
+        switch(options.where){
+            case "append":
+                this.root.append(nodes);
+                break;
+            // otherwise
+            /* falls through */
+            case "insert": // after the editable containing the text insertion point
+            case "inline": // after the text insertion point
+                this.deleteSelection();
+                if(this.insertionPoint()){
+                    this.insertionPoint().before(nodes);
+                } else {
+                    this.root.append(nodes);
+                }
+                break;
+            case "block-insert":
+                // inserts content as a block at top level of editor
+                $(this.selection_info().blockList.pop()).after(nodes);
+                break;
+            case "before":
+                target = this.find(options.target);
+                if( target.length ){
+                    target.first().before(nodes);
+                } else {
+                    this.root.append(nodes);
+                }
+                break;
+            default:
+                break;
+        }
+        this.updateUndo();
+        this.selectable.markBounds();
+        return nodes;
+    },
+    change: function(){
+        this.updateUndo();
+        return this;
+    },
+    scrollToShow: function(node){
+        console.warn('scrollToShow not implemented');
+        return this;
+    },
+    content: function( nodes ){
+        if(nodes){
+            this.root.empty().append(nodes);
+        } else {
+            return this.root().contents();
+        }
+    },
+    selectedText: function(){
+        var text = '';
+        return this.selectedBlocks().each(function(){
+            text += $(this).find('.selected').text() + '\n';
+        });
+    },
+    clearMatch: function (node){
+        $(node).find('.match').removeClass('match');
+    },
+    clearMatches: function(){
+        this.clearMatch(this.root);
+    },
+    viewMetricsCache: {},
+    viewMetrics: $.noop,
+    viewTop: $.noop,
+    viewHeight: $.noop,
+    viewBottom: $.noop,
+    search: function(needle, terms){
+        this.replace(needle, null, terms);
+    },
+    replace: function(needle, replacement, terms){
+            this.clearMatches();
+            if (''.match(needle) || (needle.constructor !== String && needle.constructor !== RegExp)) {
+                return;
+            }
+
+            if( typeof needle === 'string' ){
+                try {
+                    needle = new RegExp( needle, "gi" );
+                } catch(e) {
+                    alert( "Bad search expression" );
+                    return;
+                }
+            }
+
+            // Recursive DOM walk to highlight needles on content only.
+            var highlight = function (node) {
+                var skip = 0,
+                    idx = 0,
+                    textLength,
+                    text = node.data,
+                    wrapper = $('<span class="match"></span>').get(0),
+                    start,
+                    clone;
+                if (node.nodeType === 3) {
+                    //TODO: Look into replacing both search/match with just a single Regex.exec, seems redundant to do two searches.
+                    idx = text.search(needle);
+                    if (idx >= 0) {
+                        textLength = text.match(needle)[0].length;
+                        if (typeof replacement === 'string') {
+                            node.data = text.replace(needle, replacement);
+                        } else {
+                            start = node.splitText(idx);
+                            start.splitText(textLength);
+                            clone = start.cloneNode(true);
+                            wrapper.appendChild(clone);
+                            start.parentNode.replaceChild(wrapper, start);
+                        }
+                        skip = 1;
+                    }
+                } else if (node.nodeType === 1 && node.childNodes) {
+                    for (idx = 0; idx < node.childNodes.length; idx += 1) {
+                        idx += highlight(node.childNodes[idx]);
+                    }
+                }
+                return skip;
+            };
+
+            // TODO: make more eleganter or fix problem at source
+            // hack to remove incorrectly nested .editables
+            this.find('.editable .editable').removeClass('editable');
+            var blocks = this.settings.editableSelector
+                ? this.find('.editable')
+                : $(this.editor_root);
+
+            $.each( blocks, function( idx, block ) {
+                highlight(block);
+            });
+        },
+    clip_trap: function( content ){
+        var trap;
+        this.savedScrollTop = this.root.scrollTop();
+        trap = $("<div/>")
+            .attr({contentEditable: true, position: 'absolute', left: 20, top: 20, width: 500})
+            .append(content).spanify(false)
+            .prependTo(document.body);
+
+        trap.find('.selected,.selected-block,.first-block,.last-block')
+            .removeClass('selected selected-block first-block last-block');
+        return trap;
+    },
+    remove_trap: function(trap){
+        trap.remove();
+        this.savedScrollTop = this.savedScrollTop;
+        this.focus();
+    },
+    isEmail: function(text){
+        // jshint is mistaken about this regex
+        return text.match(/^(mailto:)?([A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,4})$/i);
+    },
+    isURL: function(text){
+        return text.match(/^(http:|https:|mailto:|tel:|ftp:|sftp:)?(\/\/)?(([^\s]+)\.([^\s]{2,}))$/);
+    },
+    // if it's a mailto, just edit the email address
+    // otherwise, if it's http:, leave out the leading characters
+    editableURL: function(text){
+        var parts = this.isEmail(text);
+        if( parts ){
+            return parts[2];
+        } else {
+            parts = this.isURL(text);
+            return parts ? (parts[1] === 'http:' ? parts[3] : text) : '';
+        }
+    },
+    // if it's an email address with no mailto, add that
+    // otherwise if there's no protocol, assume http:
+    clickableURL: function(text){
+        var parts = this.isEmail(text),
+            url = '';
+        if( parts ){
+            url = 'mailto:' + parts[2];
+        } else {
+            parts = this.isURL(text);
+            if(parts){
+                url = parts[1] ? text : 'http://' + parts[3];
+            }
+        }
+        return url;
+    },
+    makeLink: function( url, caption ){
+        if(!this.isURL(url) && !this.isEmail(url)){
+            url = '';
+        } else {
+            url = this.clickableURL(url);
+        }
+        caption = caption || this.editableURL(url) || 'Untitled';
+        return $('<a>').attr('href', url)
+                       .addClass('user-ignored-spellcheck')
+                       .append($('<span>').text(caption || url));
+    },
+    cut: function(evt){
+        evt.data.copy(evt, true);
+    },
+    copy: function(evt, actuallyCut){
+        var editable = evt.data,
+        trap = editable.clip_trap(editable.selectedNodes());
+        selectNodeText(trap);
+        setTimeout(function(){
+            editable.remove_trap(trap);
+            if(actuallyCut){
+                editable.deleteSelection();
+            }
+        });
+    },
+    paste: function(evt){
+        var editable = evt.data;
+        if(!editable.active || !$(document.activeElement).is('input.caret')){
+            return;
+        }
+
+        var pastemode = editable.pastemode,
+            paste_trap = editable.clip_trap();
+        selectNodeText(paste_trap);
+        setTimeout(function(){
+            var new_text = $(paste_trap).html(),
+                dummyNode,
+                nodes,
+                css,
+                cssAttributes,
+                inheritedStyle,
+                text,
+                attr,
+                i;
+
+            // specific hack to cleanup content pasted from pdf.js
+            if(new_text.match(/data-font/)){
+                // convert divs to spans and add spaces
+                new_text = new_text.replace(/(<\/?)div/g, ' $1span');
+            }
+            dummyNode = $('<div>').html(new_text);
+            text = dummyNode.text().trim();
+
+            if (dummyNode.has('.use-paragraph-clipboard').length) {
+                pastemode = 'paragraphs';
+            // automatically convert urls into link tags
+            } else if ( editable.isURL(text) ){
+                nodes = editable.makeLink(text);
+            // convert email addresses into mailto: links
+            } else if ( editable.isEmail(text) ){
+                nodes = editable.makeLink( text );
+            } else if (pastemode === 'merge') {
+                css = {};
+                // copying some css attributes from parent
+                cssAttributes = [ 'font-family', 'font-size', 'color', 'background-color' ];
+                inheritedStyle = getComputedStyle(editable.insertionPoint().parent()[0]);
+                for (i = 0; i < cssAttributes.length; i++) {
+                    attr = cssAttributes[i];
+                    css[attr] = inheritedStyle[attr];
+                }
+                $.extend(css, {
+                    left: '',
+                    top: '',
+                    position: '',
+                    transform: '',
+                    whiteSpace: 'normal'
+                });
+                nodes = mergeFormat(dummyNode, css).contents();
+            } else if (pastemode === 'remove') {
+                nodes = $(document.createTextNode( text ) );
+            } else if (pastemode === 'preserve'){
+                nodes = dummyNode.contents();
+            }
+
+            console.log(nodes.html());
+            editable.remove_trap(paste_trap);
+
+            if( pastemode === 'paragraphs' ){
+                editable.insert(paragraph_clipboard.clone(), {where: 'block-insert'});
+            } else if (!evt.isDefaultPrevented()) {
+                editable.insert(nodes, {where: 'inline'});
+            }
+        }, 0);
+    },
 };
 }(jQuery));

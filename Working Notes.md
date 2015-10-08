@@ -50,3 +50,4 @@
 * link editor
 * spell checking
 * validation
+* clicking in block but not over text should work properly
