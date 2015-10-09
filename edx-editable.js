@@ -791,10 +791,12 @@ Editable.prototype = {
                     editable.undo[0] = editable.root.html();
                 }
         }
-        editable.tools.find('[value="updateUndo undo"]')
-                    .prop('disabled', editable.undoDepth >= editable.undo.length - 1);
-        editable.tools.find('[value="updateUndo redo"]')
-                    .prop('disabled', editable.undoDepth === 0);
+        if(editable.tools){
+            editable.tools.find('[value="updateUndo undo"]')
+                        .prop('disabled', editable.undoDepth >= editable.undo.length - 1);
+            editable.tools.find('[value="updateUndo redo"]')
+                        .prop('disabled', editable.undoDepth === 0);
+        }
         return this;
     },
     shortcut: function(evt){
@@ -851,6 +853,7 @@ Editable.prototype = {
             blocks = editable.selectedBlocks().clone();
 
         function removeUnselected(){
+            /* jshint is confused here */
             var nodes = $(this).leafNodes();
             $.each(nodes, function(){
                 if($(this).closest('.selected').length === 0){
@@ -886,6 +889,7 @@ Editable.prototype = {
         var caret = this.find('input.caret');
         return caret.length ? caret : false;
     },
+    /* TODO fix and make work */
     updateParagraphStyleMenu: function(){
         var menu = this.tools.find('select[name="paragraph-style"]'),
             currentBlockType;
@@ -1265,6 +1269,6 @@ Editable.prototype = {
                 editable.insert(nodes, {where: 'inline'});
             }
         }, 0);
-    },
+    }
 };
 }(jQuery));
