@@ -1,47 +1,47 @@
 /**
-    # Shared Utilities
+# Shared Utilities
 
-    Low level DOM-manipulation jQuery plugins used in other modules. these
-    are used extensively by the Selectable and Editable objects to do their
-    thing.
+Low level DOM-manipulation jQuery plugins used in other modules. these
+are used extensively by the Selectable and Editable objects to do their
+thing.
 
-    $(selector).isBefore(otherElement);
+$(selector).isBefore(otherElement);
 
-    **siblingOrder** returns the index of an element among its siblings.
+**siblingOrder** returns the index of an element among its siblings.
 
-    $(selector).siblingOrder();
+$(selector).siblingOrder();
 
-    **firstLeafNode** and **lastLeafNode** return the first / last leaf node
-    (i.e. node with no childNodes) contained within the selected element.
+**firstLeafNode** and **lastLeafNode** return the first / last leaf node
+(i.e. node with no childNodes) contained within the selected element.
 
-    $(selector).firstLeafNode();
-    $(selector).lastLeafNode();
+$(selector).firstLeafNode();
+$(selector).lastLeafNode();
 
-    **nextLeafNode** and **previousLeafNode** fint the next / previous
-    matching leaf node after / before the selected element. The optional filter
-    can be a selector string (as in $(...).is(filter)) or a function which takes
-    a node and returns true or false.
+**nextLeafNode** and **previousLeafNode** fint the next / previous
+matching leaf node after / before the selected element. The optional filter
+can be a selector string (as in $(...).is(filter)) or a function which takes
+a node and returns true or false.
 
-    $(selector).nextLeafNode(filter);
-    $(selector).previousLeafNode(filter);
+$(selector).nextLeafNode(filter);
+$(selector).previousLeafNode(filter);
 
-    **allowSelection** is a convenience method for setting the CSS of the
-    selected elements to permit or deny the browser's selection behavior.
+**allowSelection** is a convenience method for setting the CSS of the
+selected elements to permit or deny the browser's selection behavior.
 
-    $(selector).allowSelection(boolean);
+$(selector).allowSelection(boolean);
 
-    **leafNodes** returns a list of all leaf nodes within the selected
-    element(s) -- optionally filtering them using an optionfal filter.
+**leafNodes** returns a list of all leaf nodes within the selected
+element(s) -- optionally filtering them using an optionfal filter.
 
-    $(selector).leafNodes(filter);
+$(selector).leafNodes(filter);
 
-    **loadFragment** is loads text from a url via ajax into the selected element(s).
-    (It was useful for testing purposes);
+**loadFragment** is loads text from a url via ajax into the selected element(s).
+(It was useful for testing purposes);
 
-    $(selector).loadFragment(url);
+$(selector).loadFragment(url);
 
-    **isBefore** is a simple utility to find out if an element comes before
-    another element. It's a wrapper around node.compareDocumentPosition().
+**isBefore** is a simple utility to find out if an element comes before
+another element. It's a wrapper around node.compareDocumentPosition().
 */
 /*jshint laxbreak: true */
 

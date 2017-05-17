@@ -1,69 +1,69 @@
 /**
-    # Selectable
+# Selectable
 
-    Disables and replaces browser selection behavior
-    Selections are marked with *selected* class
-    When the user clicks, span.sel-start marks the spot where the mousedown
-    occurred, and span.sel-end marks where the selection ended.
+Disables and replaces browser selection behavior
+Selections are marked with *selected* class
+When the user clicks, span.sel-start marks the spot where the mousedown
+occurred, and span.sel-end marks where the selection ended.
 
-    ## How it Works
+## How it Works
 
-    Selectable is a result of trying to figure out how to deal with accessibility
-    issues and editing on a mobile website (which currently sucks). While
-    considering this problem at length I had the revelation that I could figure
-    out where every character was on the screen by "spanifying" the text
-    nodes in the DOM -- i.e. wrapping a spam around ever single character (if
-    necessary). Experimentats quickly showed this was performant.
+Selectable is a result of trying to figure out how to deal with accessibility
+issues and editing on a mobile website (which currently sucks). While
+considering this problem at length I had the revelation that I could figure
+out where every character was on the screen by "spanifying" the text
+nodes in the DOM -- i.e. wrapping a spam around ever single character (if
+necessary). Experimentats quickly showed this was performant.
 
-    In essence, when the user "enters" a child of the selectable it spanifies
-    the child and then tracks entry into each span to figure out exactly where
-    the selection start/end should go. It places a .sel-start element at the
-    initial selection point and a .sel-end element at the end.
+In essence, when the user "enters" a child of the selectable it spanifies
+the child and then tracks entry into each span to figure out exactly where
+the selection start/end should go. It places a .sel-start element at the
+initial selection point and a .sel-end element at the end.
 
-    ## Mobile Implementation
+## Mobile Implementation
 
-    My plan for mobile implementation is to track the user's touch and move
-    the selection bounds as though the touch position is about 60px above
-    that touch position (creating visual affordances).
+My plan for mobile implementation is to track the user's touch and move
+the selection bounds as though the touch position is about 60px above
+that touch position (creating visual affordances).
 
-    If the user touches the selectable then it inserts and moves the selection-start
-    until the user releases (unlike with a mouse -- the selection start moves
-    rather than being extended -- unless/until the user is using a "force touch")
+If the user touches the selectable then it inserts and moves the selection-start
+until the user releases (unlike with a mouse -- the selection start moves
+rather than being extended -- unless/until the user is using a "force touch")
 
-    Once the user releases selectable would create an affordance showing the
-    beginning and end of the selection and a "grabbable" object at the insertion point
-    (I'm thinking a visibly grippy circle below it). The user can extend the
-    selection by dragging this affordance OR start a new selection by touching
-    somewhere else.
+Once the user releases selectable would create an affordance showing the
+beginning and end of the selection and a "grabbable" object at the insertion point
+(I'm thinking a visibly grippy circle below it). The user can extend the
+selection by dragging this affordance OR start a new selection by touching
+somewhere else.
 
-    I believe this will be a much better text-selection experience than is
-    offered on any mobile platform natively.
+I believe this will be a much better text-selection experience than is
+offered on any mobile platform natively.
 
-    Finally -- because the insertion-point (.caret) is an input field, a mobile
-    browser should be "fooled" into providing a keyboard.
+Finally -- because the insertion-point (.caret) is an input field, a mobile
+browser should be "fooled" into providing a keyboard.
 
-    ## Alternative Implementation of Selectable
+## Alternative Implementation of Selectable
 
-    *Break glass in case of performance issues!*
+*Break glass in case of performance issues!*
 
-    It occurs to me that there's another way selectable could be implemented, but
-    it wouldn't work for mobile. Assuming you don't care about mobile or assume
-    that some day mobile browsers won't suck for editing text, you could replace
-    the code that figures out where to put the .selStart and .selEnd.caret nodes
-    by simply allowing browser selection and then immediately after the selection
-    is completed, insert the bounds and mark the selection.
+It occurs to me that there's another way selectable could be implemented, but
+it wouldn't work for mobile. Assuming you don't care about mobile or assume
+that some day mobile browsers won't suck for editing text, you could replace
+the code that figures out where to put the .selStart and .selEnd.caret nodes
+by simply allowing browser selection and then immediately after the selection
+is completed, insert the bounds and mark the selection.
 
-    To do this you'd simply allow selection but as soon as there is a selection
-    simply place the bounds elements on the start and end points and then
-    calculate the selection yourself.
+To do this you'd simply allow selection but as soon as there is a selection
+simply place the bounds elements on the start and end points and then
+calculate the selection yourself.
 
-    This approach will eliminate the use of spanify (the function that wraps
-    every letter in a paragraph in its own span, which is at the heart of
-    Selectable) but still gives you full control over what gets selected.
+This approach will eliminate the use of spanify (the function that wraps
+every letter in a paragraph in its own span, which is at the heart of
+Selectable) but still gives you full control over what gets selected.
 
-    The downside of this approach is the selection will look weird while the
-    user is doing it (and won't be stylable). Once it's complete you have nice
-    behavior.
+The downside of this approach is the selection will look weird while the
+user is doing it (and won't be stylable). Once it's complete you have nice
+behavior.
 */
 
 /*jshint laxbreak: true */
@@ -221,7 +221,7 @@
             this.find('.caret').focus();
             return this;
         },
-        selStart: '<span class="sel-start"></span>',
+        selStart: '<input class="sel-start">',
         selEnd: '<input class="sel-end caret">',
         markBounds: function(){
             this.markRange(this.find('.sel-start'), this.find('.sel-end'));
