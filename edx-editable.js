@@ -141,7 +141,7 @@ add something like this should it be necessary.
 // private "globals"
 var blockSelector = 'h1,h2,h3,h4,h5,h6,pre,blockquote,p,div,ul,ol,th,td',
     modifierKeys = [12,16,17,18,91,92,33,34,35,36,37,38,39,40,91,93],
-    nbsp = $("<p>&nbsp;</p>").text(),
+    nbsp = String.fromCharCode(160),
     // array of editors
     editables = [],
     active_editable = false,
