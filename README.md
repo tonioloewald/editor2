@@ -2,7 +2,7 @@
 
 Rich text editor **with no contentEditable** and **no dependency on browser selection or ranges**.
 
-<a href="https://cdn.rawgit.com/tonioloewald/editor2/master/index.html">Click here for a demo</a>
+<a href="https://tonioloewald.github.io/editor2/">Click here for a demo</a>
 
 Having written a pretty robust rich text editor based on contentEditable/getSelection and then seen it have horrific 
 performance issues with recent versions of IE, and even more horrific accessibility issues everywhere, and weird
